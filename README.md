@@ -77,6 +77,32 @@ La migración `supabase/migrations/0001_perfiles.sql`:
 - deja la cuenta **inactiva** (`activo = false`) hasta que el administrador la
   apruebe.
 
+## Prueba local
+
+Con Supabase local (`supabase start`) y la migración aplicada:
+
+```bash
+npm run dev
+```
+
+| Servicio | URL |
+| --- | --- |
+| Aplicación | http://localhost:3000 |
+| Supabase Studio | http://127.0.0.1:54323 |
+| Mailpit (correos) | http://127.0.0.1:54324 |
+
+Para probar el flujo de aprobación, regístrate en `/registro` y luego activa la
+cuenta desde el Studio o con SQL:
+
+```sql
+update public.perfiles
+set activo = true, rol = 'usuario'
+where correo = 'jefe@unitec.edu';
+```
+
+> `supabase db reset` borra los usuarios y vuelve a aplicar las migraciones.
+> Después hay que registrar de nuevo las cuentas de prueba.
+
 ## Flujo de acceso
 
 1. La persona se registra en `/registro` con su correo institucional.
