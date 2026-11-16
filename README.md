@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Solicitudes y Auditorías — Gestión de Laboratorios
 
-## Getting Started
+Sistema interno de la **Coordinación de Laboratorios de Ingeniería de UNITEC**
+para gestionar solicitudes de compra, mantenimiento, descarte y auditorías 5S,
+de seguridad y de cómputo.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, Turbopack)
+- **TypeScript**
+- **Tailwind CSS 4**
+- **Supabase**: autenticación, base de datos y Storage
+- **Vercel** para el despliegue
+
+## Identidad visual
+
+Se reutiliza la paleta de LabHub y Asistencias de Laboratorios:
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--fondo` | `#07065d` | Fondo de acceso |
+| `--fondo-profundo` | `#04042e` | Overlay del fondo |
+| `--superficie-azul` | `#06065c` | Botones y cabeceras |
+| `--acento` | `#0f49b6` | Hover, enlaces y énfasis |
+| `--acento-claro` | `#6ea2ff` | Texto secundario sobre azul |
+| `--superficie-clara` | `#f3f4f6` | Fondo de contenido |
+| `--tarjeta` | `#ffffff` | Tarjetas y formularios |
+| `--borde` | `#e3e8f2` | Bordes |
+| `--texto` | `#0a1633` | Texto principal |
+| `--tenue` | `#56648a` | Texto secundario |
+
+## Requisitos
+
+- Node.js 20 o superior
+- npm
+- Un proyecto de Supabase
+
+## Puesta en marcha
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_DOMINIO_INSTITUCIONAL=unitec.edu
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-## Learn More
+- Las variables `NEXT_PUBLIC_*` se inlinean en el build: deben existir antes de
+  `npm run build`.
+- `SUPABASE_SERVICE_ROLE_KEY` es **solo de servidor**. Se usará para el CRUD de
+  usuarios y tareas administrativas.
+- Sin las variables públicas, la pantalla de login funciona pero avisa que
+  falta configurar Supabase.
 
-To learn more about Next.js, take a look at the following resources:
+## Base de datos
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Aplica la migración inicial en el SQL Editor de Supabase o con la CLI:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+supabase db push
+```
 
-## Deploy on Vercel
+La migración `supabase/migrations/0001_perfiles.sql`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- crea `public.perfiles`;
+- activa RLS y permite que cada usuario lea su propio perfil;
+- crea automáticamente el perfil al registrarse;
+- deja la cuenta **inactiva** (`activo = false`) hasta que el administrador la
+  apruebe.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Flujo de acceso
+
+1. La persona se registra en `/registro` con su correo institucional.
+2. Supabase envía el correo de confirmación (si está activado).
+3. El perfil se crea con rol `usuario` y `activo = false`.
+4. El administrador revisa la cuenta, la activa y le asigna el rol.
+5. La persona inicia sesión en `/login`.
+
+El administrador no crea cuentas: solo **aprueba** y administra las existentes.
+El CRUD de usuarios se implementará en el panel de administración.
+
+### Configuración recomendada en Supabase
+
+- **Auth → Providers → Email**: habilitado.
+- **Auth → Settings → Confirm email**: activado.
+- **Auth → Settings → Allowed email domains**: agregar el dominio
+  institucional como segunda barrera.
+
+El registro también valida el dominio en el navegador con
+`NEXT_PUBLIC_DOMINIO_INSTITUCIONAL`.
+
+## Rutas actuales
+
+| Ruta | Descripción |
+| --- | --- |
+| `/` | Redirige a `/login` |
+| `/login` | Inicio de sesión |
+| `/registro` | Registro con correo institucional |
+| `/panel` | Panel provisional con la sesión iniciada |
+| `/auth/confirm` | Confirmación de correo de Supabase |
+
+## Scripts
+
+```bash
+npm run dev      # desarrollo
+npm run lint     # ESLint
+npm run build    # build de producción
+npm run start    # producción local
+```
+
+Verificación antes de cerrar una tarea:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+## Estado
+
+- [x] Proyecto Next.js inicializado
+- [x] Login y registro con Supabase
+- [x] Perfiles con aprobación del administrador
+- [ ] Panel de administración de usuarios
+- [ ] Módulo de solicitudes de compra
+- [ ] Módulo de mantenimiento
+- [ ] Módulo de descarte
+- [ ] Auditorías 5S
+- [ ] Auditorías de seguridad
+- [ ] Auditorías de cómputo
