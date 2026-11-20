@@ -111,8 +111,24 @@ where correo = 'jefe@unitec.edu';
 4. El administrador revisa la cuenta, la activa y le asigna el rol.
 5. La persona inicia sesión en `/login`.
 
-El administrador no crea cuentas: solo **aprueba** y administra las existentes.
-El CRUD de usuarios se implementará en el panel de administración.
+El administrador puede **aprobar** las cuentas registradas o **crear usuarios
+directamente** desde el panel, con una contraseña temporal y el rol asignado.
+
+## Panel de administración
+
+El panel tiene un layout con sidebar, navegación por rol y cierre de sesión.
+La sección **Usuarios** (solo para `admin`) permite:
+
+- Buscar por nombre o correo y filtrar por rol.
+- Ver el resumen de cuentas: total, activas, pendientes y administradores.
+- Crear usuarios con nombre, correo, área, rol y contraseña temporal.
+- Cambiar el rol: administrador, usuario o consulta.
+- Activar o desactivar cuentas.
+- Eliminar usuarios.
+- Protecciones: no puedes cambiar tu propio rol, desactivarte, eliminarte ni
+  dejar el sistema sin administradores activos.
+
+Requiere `SUPABASE_SERVICE_ROLE_KEY` en el servidor, porque el CRUD bypassa RLS.
 
 ### Configuración recomendada en Supabase
 
@@ -128,10 +144,15 @@ El registro también valida el dominio en el navegador con
 
 | Ruta | Descripción |
 | --- | --- |
-| `/` | Redirige a `/login` |
+| `/` | Redirige a `/login` o `/panel` según la sesión |
 | `/login` | Inicio de sesión |
 | `/registro` | Registro con correo institucional |
-| `/panel` | Panel provisional con la sesión iniciada |
+| `/panel` | Panel con módulos y estado de la cuenta |
+| `/panel/usuarios` | CRUD de usuarios (solo admin) |
+| `/panel/compras` | Módulo en construcción |
+| `/panel/mantenimiento` | Módulo en construcción |
+| `/panel/descarte` | Módulo en construcción |
+| `/panel/auditorias` | Módulo en construcción |
 | `/auth/confirm` | Confirmación de correo de Supabase |
 
 ## Scripts
@@ -156,7 +177,8 @@ npm run build
 - [x] Proyecto Next.js inicializado
 - [x] Login y registro con Supabase
 - [x] Perfiles con aprobación del administrador
-- [ ] Panel de administración de usuarios
+- [x] Layout del panel con sidebar, navegación por rol y logout
+- [x] CRUD de usuarios (crear, rol, activar/desactivar, eliminar)
 - [ ] Módulo de solicitudes de compra
 - [ ] Módulo de mantenimiento
 - [ ] Módulo de descarte

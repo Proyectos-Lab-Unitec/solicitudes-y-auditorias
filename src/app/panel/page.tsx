@@ -1,82 +1,134 @@
-import Image from "next/image";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { BotonSalir } from "./boton-salir";
+import Link from "next/link";
+import { connection } from "next/server";
+import {
+  FiClipboard,
+  FiShoppingCart,
+  FiTool,
+  FiTrash2,
+  FiUsers,
+} from "react-icons/fi";
+import type { IconType } from "react-icons";
+import { requirePerfil } from "@/lib/auth";
 
-// Lee la sesión (cookies) en cada request; se permite bloquear el prerender.
 export const instant = false;
 
+type Modulo = {
+  href: string;
+  titulo: string;
+  descripcion: string;
+  icono: IconType;
+  listo: boolean;
+};
+
 export default async function PanelPage() {
-  const supabase = await createClient();
+  await connection();
+  const perfil = await requirePerfil();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: perfil } = await supabase
-    .from("perfiles")
-    .select("nombre, rol, activo")
-    .eq("id", user.id)
-    .single();
-
-  if (!perfil || !perfil.activo) {
-    redirect("/login?inactivo=1");
-  }
+  const modulos: Modulo[] = [
+    ...(perfil.rol === "admin"
+      ? [
+          {
+            href: "/panel/usuarios",
+            titulo: "Usuarios",
+            descripcion:
+              "Aprueba cuentas, asigna roles y administra el acceso al sistema.",
+            icono: FiUsers,
+            listo: true,
+          },
+        ]
+      : []),
+    {
+      href: "/panel/compras",
+      titulo: "Solicitudes de compra",
+      descripcion: "Solicita ítems, revisa cotizaciones y da seguimiento.",
+      icono: FiShoppingCart,
+      listo: false,
+    },
+    {
+      href: "/panel/mantenimiento",
+      titulo: "Mantenimiento",
+      descripcion: "Reporta fallas y convierte solicitudes en órdenes de trabajo.",
+      icono: FiTool,
+      listo: false,
+    },
+    {
+      href: "/panel/descarte",
+      titulo: "Descarte",
+      descripcion: "Solicita la baja de activos y genera la carta y el AF-02.",
+      icono: FiTrash2,
+      listo: false,
+    },
+    {
+      href: "/panel/auditorias",
+      titulo: "Auditorías",
+      descripcion: "Ejecuta auditorías 5S, de seguridad y de cómputo.",
+      icono: FiClipboard,
+      listo: false,
+    },
+  ];
 
   return (
-    <div className="min-h-dvh bg-superficie-clara">
-      <header className="bg-superficie-azul text-white">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/unitec-logo.png"
-              alt="UNITEC"
-              width={32}
-              height={32}
-              className="size-8 rounded-md bg-white/10 p-1"
-            />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-tight">
-                Gestión de Laboratorios
-              </p>
-              <p className="truncate text-[11px] text-acento-claro">
-                Coordinación de Laboratorios de Ingeniería
-              </p>
-            </div>
-          </div>
-          <BotonSalir />
+    <div className="space-y-6">
+      <section className="rounded-2xl bg-tarjeta p-6 shadow-sm ring-1 ring-borde sm:p-8">
+        <p className="text-xs font-semibold tracking-[0.16em] text-acento uppercase">
+          Panel
+        </p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-texto">
+          Hola, {perfil.nombre}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-tenue">
+          Desde aquí se gestionan las solicitudes y auditorías de la Coordinación
+          de Laboratorios. Los módulos se irán habilitando por fases.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-superficie-clara px-3 py-1 text-tenue">
+            Correo: {perfil.correo}
+          </span>
+          <span className="rounded-full bg-superficie-clara px-3 py-1 text-tenue">
+            Rol: {perfil.rol}
+          </span>
+          {perfil.area && (
+            <span className="rounded-full bg-superficie-clara px-3 py-1 text-tenue">
+              Área: {perfil.area}
+            </span>
+          )}
         </div>
-      </header>
+      </section>
 
-      <main className="mx-auto w-full max-w-5xl px-5 py-10">
-        <section className="rounded-2xl bg-tarjeta p-6 shadow-sm ring-1 ring-borde sm:p-8">
-          <p className="text-xs font-semibold tracking-[0.16em] text-acento uppercase">
-            Sesión iniciada
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-texto">
-            Hola, {perfil.nombre}
-          </h1>
-          <p className="mt-2 text-sm text-tenue">
-            Rol: <strong className="text-texto">{perfil.rol}</strong> · Correo:{" "}
-            {user.email}
-          </p>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {modulos.map((modulo) => {
+          const Icono = modulo.icono;
 
-          <div className="mt-8 rounded-xl border border-dashed border-borde bg-superficie-clara p-6">
-            <p className="text-sm font-semibold text-texto">
-              Panel en construcción
-            </p>
-            <p className="mt-1 text-sm leading-6 text-tenue">
-              Aquí se agregarán los módulos de solicitudes de compra,
-              mantenimiento, descarte y las auditorías 5S, de seguridad y de
-              cómputo.
-            </p>
-          </div>
-        </section>
-      </main>
+          return (
+            <Link
+              key={modulo.href}
+              href={modulo.href}
+              className="group flex flex-col rounded-2xl bg-tarjeta p-5 shadow-sm ring-1 ring-borde transition hover:-translate-y-0.5 hover:shadow-md hover:ring-acento/40"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-superficie-clara text-acento transition group-hover:bg-acento group-hover:text-white">
+                  <Icono className="size-5" />
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                    modulo.listo
+                      ? "bg-green-50 text-green-700"
+                      : "bg-superficie-clara text-tenue"
+                  }`}
+                >
+                  {modulo.listo ? "Disponible" : "Pronto"}
+                </span>
+              </div>
+              <h2 className="mt-4 text-base font-semibold text-texto">
+                {modulo.titulo}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-tenue">
+                {modulo.descripcion}
+              </p>
+            </Link>
+          );
+        })}
+      </section>
     </div>
   );
 }
