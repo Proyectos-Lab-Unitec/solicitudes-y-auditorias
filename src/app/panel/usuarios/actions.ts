@@ -6,7 +6,7 @@ import { getPerfilActual } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EstadoAccion, Rol } from "@/lib/types";
 
-const ROLES: Rol[] = ["admin", "usuario", "consulta"];
+const ROLES: Rol[] = ["admin", "usuario", "consultor", "checklist"];
 
 function texto(formData: FormData, campo: string) {
   const valor = formData.get(campo);

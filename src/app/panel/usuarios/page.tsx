@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { ETIQUETA_ROL } from "@/lib/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Perfil, Rol } from "@/lib/types";
 import { NuevoUsuarioForm } from "./nuevo-usuario";
@@ -11,17 +12,12 @@ export const metadata = { title: "Usuarios | Gestión de Laboratorios" };
 
 type UsuarioAdmin = Perfil & { creado_en: string | null };
 
-const ETIQUETA_ROL: Record<Rol, string> = {
-  admin: "Administrador",
-  usuario: "Usuario",
-  consulta: "Consulta",
-};
-
 function BadgeRol({ rol }: { rol: Rol }) {
   const estilos: Record<Rol, string> = {
     admin: "bg-blue-50 text-blue-700 ring-blue-100",
     usuario: "bg-slate-100 text-slate-700 ring-slate-200",
-    consulta: "bg-purple-50 text-purple-700 ring-purple-100",
+    consultor: "bg-purple-50 text-purple-700 ring-purple-100",
+    checklist: "bg-teal-50 text-teal-700 ring-teal-100",
   };
 
   return (
@@ -68,7 +64,10 @@ export default async function UsuariosPage({
 
   const busqueda = (params.q ?? "").trim();
   const rolFiltro: Rol | "" =
-    params.rol === "admin" || params.rol === "usuario" || params.rol === "consulta"
+    params.rol === "admin" ||
+    params.rol === "usuario" ||
+    params.rol === "consultor" ||
+    params.rol === "checklist"
       ? params.rol
       : "";
 
@@ -175,7 +174,8 @@ export default async function UsuariosPage({
           <option value="">Todos los roles</option>
           <option value="admin">Administrador</option>
           <option value="usuario">Usuario</option>
-          <option value="consulta">Consulta</option>
+          <option value="consultor">Consultor</option>
+          <option value="checklist">Checklist</option>
         </select>
         <button
           type="submit"

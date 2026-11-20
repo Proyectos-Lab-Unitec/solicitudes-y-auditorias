@@ -1,9 +1,12 @@
 import { FiTool } from "react-icons/fi";
 import { ModuloEnConstruccion } from "@/components/modulo-en-construccion";
+import { requireModulo } from "@/lib/auth";
 
 export const metadata = { title: "Mantenimiento | Gestión de Laboratorios" };
 
-export default function MantenimientoPage() {
+export default async function MantenimientoPage() {
+  await requireModulo("mantenimiento");
+
   return (
     <ModuloEnConstruccion
       icono={FiTool}

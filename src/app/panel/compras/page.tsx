@@ -1,9 +1,12 @@
 import { FiShoppingCart } from "react-icons/fi";
 import { ModuloEnConstruccion } from "@/components/modulo-en-construccion";
+import { requireModulo } from "@/lib/auth";
 
 export const metadata = { title: "Compras | Gestión de Laboratorios" };
 
-export default function ComprasPage() {
+export default async function ComprasPage() {
+  await requireModulo("compras");
+
   return (
     <ModuloEnConstruccion
       icono={FiShoppingCart}

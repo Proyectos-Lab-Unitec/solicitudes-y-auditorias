@@ -5,10 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  FiClipboard,
+  FiCheckSquare,
   FiHome,
+  FiInbox,
   FiLogOut,
   FiMenu,
+  FiMonitor,
+  FiShield,
   FiShoppingCart,
   FiTool,
   FiTrash2,
@@ -16,6 +19,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import type { IconType } from "react-icons";
+import { ETIQUETA_ROL, puedeVerModulo, type Modulo } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/client";
 import type { Perfil } from "@/lib/types";
 
@@ -23,6 +27,7 @@ type Item = {
   href: string;
   label: string;
   icono: IconType;
+  modulo?: Modulo;
   exacto?: boolean;
   pronto?: boolean;
 };
@@ -39,42 +44,68 @@ export function PanelShell({
   const [abierto, setAbierto] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
 
-  const items: Item[] = [
+  const todos: Item[] = [
     { href: "/panel", label: "Panel", icono: FiHome, exacto: true },
-    ...(perfil.rol === "admin"
-      ? [
-          {
-            href: "/panel/usuarios",
-            label: "Usuarios",
-            icono: FiUsers,
-          },
-        ]
-      : []),
     {
+      modulo: "usuarios",
+      href: "/panel/usuarios",
+      label: "Usuarios",
+      icono: FiUsers,
+    },
+    {
+      modulo: "solicitudes",
+      href: "/panel/solicitudes",
+      label: "Solicitudes",
+      icono: FiInbox,
+      pronto: true,
+    },
+    {
+      modulo: "compras",
       href: "/panel/compras",
       label: "Compras",
       icono: FiShoppingCart,
       pronto: true,
     },
     {
+      modulo: "mantenimiento",
       href: "/panel/mantenimiento",
       label: "Mantenimiento",
       icono: FiTool,
       pronto: true,
     },
     {
+      modulo: "descarte",
       href: "/panel/descarte",
       label: "Descarte",
       icono: FiTrash2,
       pronto: true,
     },
     {
-      href: "/panel/auditorias",
-      label: "Auditorías",
-      icono: FiClipboard,
+      modulo: "auditorias-5s",
+      href: "/panel/auditorias/5s",
+      label: "Auditorías 5S",
+      icono: FiCheckSquare,
+      pronto: true,
+    },
+    {
+      modulo: "auditorias-seguridad",
+      href: "/panel/auditorias/seguridad",
+      label: "Auditorías de seguridad",
+      icono: FiShield,
+      pronto: true,
+    },
+    {
+      modulo: "auditorias-computo",
+      href: "/panel/auditorias/computo",
+      label: "Auditorías de cómputo",
+      icono: FiMonitor,
       pronto: true,
     },
   ];
+
+  const items = todos.filter(
+    (item) => !item.modulo || puedeVerModulo(perfil.rol, item.modulo)
+  );
 
   async function salir() {
     if (saliendo) return;
@@ -169,7 +200,7 @@ export function PanelShell({
               {perfil.correo}
             </p>
             <p className="mt-1 text-[10px] font-medium tracking-wider text-blue-300 uppercase">
-              {perfil.rol}
+              {ETIQUETA_ROL[perfil.rol]}
             </p>
           </div>
           <button
@@ -203,7 +234,7 @@ export function PanelShell({
             </p>
           </div>
           <span className="hidden rounded-full bg-superficie-clara px-3 py-1 text-xs font-medium text-tenue sm:inline">
-            Rol: {perfil.rol}
+            Rol: {ETIQUETA_ROL[perfil.rol]}
           </span>
         </header>
 

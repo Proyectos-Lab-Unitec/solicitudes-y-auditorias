@@ -1,9 +1,12 @@
 import { FiTrash2 } from "react-icons/fi";
 import { ModuloEnConstruccion } from "@/components/modulo-en-construccion";
+import { requireModulo } from "@/lib/auth";
 
 export const metadata = { title: "Descarte | Gestión de Laboratorios" };
 
-export default function DescartePage() {
+export default async function DescartePage() {
+  await requireModulo("descarte");
+
   return (
     <ModuloEnConstruccion
       icono={FiTrash2}

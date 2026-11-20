@@ -98,8 +98,9 @@ export function NuevoUsuarioForm() {
               defaultValue="usuario"
               className="w-full rounded-lg border border-borde bg-white px-3 py-2.5 text-texto outline-none transition focus:border-superficie-azul focus:ring-2 focus:ring-superficie-azul/20"
             >
-              <option value="usuario">Usuario</option>
-              <option value="consulta">Consulta</option>
+              <option value="usuario">Usuario (Jefe de área / Instructor)</option>
+              <option value="consultor">Consultor</option>
+              <option value="checklist">Checklist</option>
               <option value="admin">Administrador</option>
             </select>
           </label>

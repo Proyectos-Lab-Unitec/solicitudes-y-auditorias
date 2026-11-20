@@ -1,4 +1,4 @@
-export type Rol = "admin" | "usuario" | "consulta";
+export type Rol = "admin" | "usuario" | "consultor" | "checklist";
 
 export type Perfil = {
   id: string;

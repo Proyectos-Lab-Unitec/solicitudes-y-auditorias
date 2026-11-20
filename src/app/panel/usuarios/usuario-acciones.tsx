@@ -63,7 +63,8 @@ export function UsuarioAcciones({
           className="rounded-lg border border-borde bg-white px-2 py-1.5 text-xs text-texto outline-none transition focus:border-superficie-azul focus:ring-2 focus:ring-superficie-azul/20 disabled:opacity-60"
         >
           <option value="usuario">Usuario</option>
-          <option value="consulta">Consulta</option>
+          <option value="consultor">Consultor</option>
+          <option value="checklist">Checklist</option>
           <option value="admin">Administrador</option>
         </select>
 

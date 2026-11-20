@@ -114,6 +114,20 @@ where correo = 'jefe@unitec.edu';
 El administrador puede **aprobar** las cuentas registradas o **crear usuarios
 directamente** desde el panel, con una contraseña temporal y el rol asignado.
 
+## Roles
+
+| Rol | Acceso |
+| --- | --- |
+| `admin` | Panel de administración (usuarios y bandeja de solicitudes), auditorías 5S y de seguridad. |
+| `usuario` | Jefe de área / Instructor: solicitudes de compra, mantenimiento y descarte. |
+| `consultor` | Solo lectura de los módulos. |
+| `checklist` | Solo auditorías de cómputo: laboratorios, ítems y registro diario. |
+
+El auto-registro crea la cuenta como `usuario` inactivo. El administrador la
+activa y, si corresponde, cambia el rol a `consultor` o `checklist`. La
+navegación y el acceso a cada módulo se validan en el servidor con la matriz de
+`src/lib/roles.ts`.
+
 ## Panel de administración
 
 El panel tiene un layout con sidebar, navegación por rol y cierre de sesión.
@@ -122,7 +136,7 @@ La sección **Usuarios** (solo para `admin`) permite:
 - Buscar por nombre o correo y filtrar por rol.
 - Ver el resumen de cuentas: total, activas, pendientes y administradores.
 - Crear usuarios con nombre, correo, área, rol y contraseña temporal.
-- Cambiar el rol: administrador, usuario o consulta.
+- Cambiar el rol: administrador, usuario, consultor o checklist.
 - Activar o desactivar cuentas.
 - Eliminar usuarios.
 - Protecciones: no puedes cambiar tu propio rol, desactivarte, eliminarte ni
@@ -149,10 +163,13 @@ El registro también valida el dominio en el navegador con
 | `/registro` | Registro con correo institucional |
 | `/panel` | Panel con módulos y estado de la cuenta |
 | `/panel/usuarios` | CRUD de usuarios (solo admin) |
-| `/panel/compras` | Módulo en construcción |
-| `/panel/mantenimiento` | Módulo en construcción |
-| `/panel/descarte` | Módulo en construcción |
-| `/panel/auditorias` | Módulo en construcción |
+| `/panel/solicitudes` | Bandeja de aprobación (solo admin) |
+| `/panel/compras` | Solicitudes de compra (usuario) |
+| `/panel/mantenimiento` | Solicitudes de mantenimiento (usuario) |
+| `/panel/descarte` | Solicitudes de descarte (usuario) |
+| `/panel/auditorias/5s` | Auditorías 5S (admin y consultor) |
+| `/panel/auditorias/seguridad` | Auditorías de seguridad (admin y consultor) |
+| `/panel/auditorias/computo` | Auditorías de cómputo (checklist y consultor) |
 | `/auth/confirm` | Confirmación de correo de Supabase |
 
 ## Scripts

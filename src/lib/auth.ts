@@ -1,6 +1,8 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
+import { puedeVerModulo, type Modulo } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { Perfil } from "@/lib/types";
 
@@ -44,6 +46,22 @@ export async function requireAdmin(): Promise<Perfil> {
   const perfil = await requirePerfil();
 
   if (perfil.rol !== "admin") {
+    redirect("/panel");
+  }
+
+  return perfil;
+}
+
+/**
+ * Protege una página según la matriz de módulos por rol.
+ * Fuerza request time porque Supabase usa Date.now() al validar la sesión.
+ */
+export async function requireModulo(modulo: Modulo): Promise<Perfil> {
+  await connection();
+
+  const perfil = await requirePerfil();
+
+  if (!puedeVerModulo(perfil.rol, modulo)) {
     redirect("/panel");
   }
 
