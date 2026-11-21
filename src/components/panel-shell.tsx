@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   FiCheckSquare,
   FiHome,
@@ -21,6 +21,7 @@ import {
 import type { IconType } from "react-icons";
 import { ETIQUETA_ROL, puedeVerModulo, type Modulo } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/client";
+import { conTimeout } from "@/lib/tiempo";
 import type { Perfil } from "@/lib/types";
 
 type Item = {
@@ -40,7 +41,6 @@ export function PanelShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
 
@@ -112,10 +112,19 @@ export function PanelShell({
     setSaliendo(true);
 
     try {
-      await createClient().auth.signOut();
+      const supabase = createClient();
+
+      try {
+        await conTimeout(supabase.auth.signOut(), 5_000);
+      } catch {
+        // Si el servidor no responde, al menos se limpia la sesión local.
+        await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      }
+    } catch {
+      // Si ni siquiera se pudo crear el cliente, igual se sale de la vista.
     } finally {
-      router.push("/login");
-      router.refresh();
+      // Recarga completa: evita que el layout anterior quede en "Saliendo…".
+      window.location.replace("/login");
     }
   }
 
