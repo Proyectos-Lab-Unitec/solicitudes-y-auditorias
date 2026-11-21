@@ -172,6 +172,32 @@ El registro también valida el dominio en el navegador con
 | `/panel/auditorias/computo` | Auditorías de cómputo (checklist y consultor) |
 | `/auth/confirm` | Confirmación de correo de Supabase |
 
+## Integración con LabHub
+
+Cada módulo se publica como una **tarjeta individual** en LabHub. La tarjeta
+debe apuntar a la ruta del módulo:
+
+| Tarjeta | Ruta |
+| --- | --- |
+| Compras | `/panel/compras` |
+| Mantenimiento | `/panel/mantenimiento` |
+| Descarte | `/panel/descarte` |
+| Auditorías 5S | `/panel/auditorias/5s` |
+| Auditorías de seguridad | `/panel/auditorias/seguridad` |
+| Auditorías de cómputo | `/panel/auditorias/computo` |
+
+Si la persona no tiene sesión, el proxy la envía a:
+
+```text
+/login?next=<ruta original>
+```
+
+Después del login, la aplicación valida que el rol tenga acceso y la devuelve al
+módulo solicitado. Si no tiene acceso, la manda a `/panel`.
+
+El parámetro `next` solo acepta rutas internas que empiecen con `/panel`;
+cualquier otro valor se descarta para evitar redirecciones abiertas.
+
 ## Scripts
 
 ```bash

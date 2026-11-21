@@ -1,6 +1,8 @@
 import { FiMonitor } from "react-icons/fi";
 import { requireModulo } from "@/lib/auth";
 
+export const instant = false;
+
 export const metadata = {
   title: "Auditorías de cómputo | Gestión de Laboratorios",
 };

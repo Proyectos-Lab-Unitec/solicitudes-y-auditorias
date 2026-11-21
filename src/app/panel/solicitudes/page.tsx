@@ -3,6 +3,8 @@ import { FiInbox, FiShoppingCart, FiTool, FiTrash2 } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import { requireModulo } from "@/lib/auth";
 
+export const instant = false;
+
 export const metadata = {
   title: "Solicitudes | Gestión de Laboratorios",
 };

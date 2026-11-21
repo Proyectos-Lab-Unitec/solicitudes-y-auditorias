@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth-shell";
+import { destinoSeguro } from "@/lib/rutas";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -17,9 +18,11 @@ export default async function LoginPage({
     inactivo?: string;
     confirmado?: string;
     error?: string;
+    next?: string;
   }>;
 }) {
   const params = await searchParams;
+  const next = destinoSeguro(params.next);
 
   const avisoInicial = params.confirmado
     ? {
@@ -43,7 +46,7 @@ export default async function LoginPage({
 
   return (
     <AuthShell>
-      <LoginForm avisoInicial={avisoInicial} />
+      <LoginForm avisoInicial={avisoInicial} next={next} />
     </AuthShell>
   );
 }

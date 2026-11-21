@@ -9,7 +9,7 @@ import {
 } from "@/lib/constantes";
 import { conTimeout } from "@/lib/tiempo";
 
-export function RegistroForm() {
+export function RegistroForm({ next = "/panel" }: { next?: string }) {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +104,11 @@ export function RegistroForm() {
           </p>
         </div>
         <Link
-          href="/login"
+          href={
+            next !== "/panel"
+              ? `/login?next=${encodeURIComponent(next)}`
+              : "/login"
+          }
           className="inline-flex w-full items-center justify-center rounded-lg bg-superficie-azul py-3 text-base font-semibold text-white transition-colors hover:bg-acento"
         >
           Volver al inicio de sesión
@@ -223,7 +227,11 @@ export function RegistroForm() {
       <p className="text-center text-sm text-tenue">
         ¿Ya tienes cuenta?{" "}
         <Link
-          href="/login"
+          href={
+            next !== "/panel"
+              ? `/login?next=${encodeURIComponent(next)}`
+              : "/login"
+          }
           className="font-semibold text-acento transition hover:text-superficie-azul"
         >
           Iniciar sesión

@@ -3,12 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { puedeVerRuta } from "@/lib/rutas";
 import { createClient, supabaseConfigurado } from "@/lib/supabase/client";
 import { conTimeout } from "@/lib/tiempo";
+import type { Rol } from "@/lib/types";
 
 type Aviso = { texto: string; tipo: "info" | "exito" | "error" };
 
-export function LoginForm({ avisoInicial }: { avisoInicial?: Aviso }) {
+export function LoginForm({
+  avisoInicial,
+  next = "/panel",
+}: {
+  avisoInicial?: Aviso;
+  next?: string;
+}) {
   const router = useRouter();
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
@@ -63,7 +71,10 @@ export function LoginForm({ avisoInicial }: { avisoInicial?: Aviso }) {
       }
 
       setPassword("");
-      router.push("/panel");
+
+      // Vuelve al módulo solicitado si el rol tiene acceso; si no, al panel.
+      const destino = puedeVerRuta(perfil.rol as Rol, next) ? next : "/panel";
+      router.push(destino);
       router.refresh();
     } catch (err) {
       const mensaje =
@@ -107,6 +118,12 @@ export function LoginForm({ avisoInicial }: { avisoInicial?: Aviso }) {
           }
         >
           {avisoInicial.texto}
+        </div>
+      )}
+
+      {next !== "/panel" && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Inicia sesión para continuar con el módulo que seleccionaste.
         </div>
       )}
 
@@ -173,7 +190,11 @@ export function LoginForm({ avisoInicial }: { avisoInicial?: Aviso }) {
       <p className="text-center text-sm text-tenue">
         ¿No tienes cuenta?{" "}
         <Link
-          href="/registro"
+          href={
+            next !== "/panel"
+              ? `/registro?next=${encodeURIComponent(next)}`
+              : "/registro"
+          }
           className="font-semibold text-acento transition hover:text-superficie-azul"
         >
           Crear cuenta

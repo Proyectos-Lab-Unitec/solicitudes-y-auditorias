@@ -46,7 +46,13 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !esRutaPublica) {
     const destino = request.nextUrl.clone();
+    // Guarda la ruta original para volver a ella después del login.
+    const next = `${path}${request.nextUrl.search}`;
+
     destino.pathname = "/login";
+    destino.search = "";
+    destino.searchParams.set("next", next);
+
     return NextResponse.redirect(destino);
   }
 
