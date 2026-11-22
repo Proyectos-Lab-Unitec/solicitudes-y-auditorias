@@ -63,19 +63,104 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 ## Base de datos
 
-Aplica la migración inicial en el SQL Editor de Supabase o con la CLI:
+Las migraciones viven en `supabase/migrations/` y son la fuente de verdad:
+
+| Migración | Contenido |
+| --- | --- |
+| `0001_perfiles.sql` | `perfiles`, alta automática y cuenta inactiva |
+| `0002_roles.sql` | roles `admin`, `usuario`, `consultor`, `checklist` |
+| `0003_auditorias_computo.sql` | laboratorios, ítems y auditorías |
+| `0004_auditorias_semanales.sql` | computadoras, días, equipos y respuestas |
+| `0005_trimestres_semanas.sql` | trimestre y número de semana (Q1–Q4) |
+| `0006_rls_endurecida.sql` | políticas RLS por rol y cierre de la API |
+| `0007_rls_vistas.sql` | cierre automático de vistas y vistas materializadas |
+| `0008_anio_auditorias.sql` | año del trimestre en las auditorías de cómputo |
+| `0009_revision_semanal_unica.sql` | una sola revisión por semana (sin días) |
+| `0010_estados_checkbox.sql` | estados `pendiente`/`ok` y conteo de problemas |
+
+En local:
+
+```bash
+supabase start
+supabase migration up
+```
+
+En producción:
 
 ```bash
 supabase db push
 ```
 
-La migración `supabase/migrations/0001_perfiles.sql`:
+La cuenta se crea **inactiva** (`activo = false`) hasta que el administrador la
+apruebe.
 
-- crea `public.perfiles`;
-- activa RLS y permite que cada usuario lea su propio perfil;
-- crea automáticamente el perfil al registrarse;
-- deja la cuenta **inactiva** (`activo = false`) hasta que el administrador la
-  apruebe.
+## Seguridad de la base (RLS)
+
+La API REST de Supabase queda expuesta con la publishable key, así que RLS es la
+barrera que impide leer o escribir sin pasar por la app. El modelo está en
+`supabase/migrations/0006_rls_endurecida.sql` y sigue el patrón de
+`Proyectos/proyectoReserva`:
+
+- `anon` no tiene **ningún** privilegio: todo el sistema exige sesión.
+- `authenticated` recibe permisos por tabla; RLS filtra las filas.
+- El backend usa `service_role` (bypassa RLS) y es el único que escribe en la
+  práctica.
+- Una tabla nueva nace **cerrada**: sin grants para `anon`/`authenticated`.
+  Además, un event trigger (`rls_por_defecto`) habilita RLS automáticamente en
+  cada `CREATE TABLE` dentro de `public`.
+- Las vistas nuevas también nacen cerradas y con `security_invoker = true`,
+  porque una vista creada por un rol con BYPASSRLS podría saltarse las políticas
+  de sus tablas base.
+
+### Helpers
+
+| Función | Qué hace |
+| --- | --- |
+| `mi_rol()` | Rol del usuario autenticado. |
+| `mi_cuenta_activa()` | Si su cuenta está aprobada. |
+| `tiene_rol(...)` | Rol permitido **y** cuenta activa. |
+| `es_admin()`, `es_usuario()`, `es_consultor()`, `es_checklist()` | Atajos. |
+| `puede_leer_computo()` / `puede_escribir_computo()` | Matriz de cómputo. |
+| `puede_leer_solicitudes()` / `puede_escribir_solicitudes()` | Solicitudes. |
+
+Son `security definer` con `search_path` fijo para leer `perfiles` sin
+recursión en las políticas.
+
+### Matriz aplicada
+
+| Tabla | SELECT | INSERT / UPDATE / DELETE |
+| --- | --- | --- |
+| `perfiles` | propio o admin | propio (sin cambiar rol ni `activo`) o admin |
+| `labs_computo`, `computadoras`, `checklist_items`, auditorías, equipos y respuestas | admin, consultor, checklist | solo checklist |
+
+Admin y consultor son **solo lectura** en cómputo; `checklist` es el único que
+escribe. Una cuenta inactiva no pasa ninguna política aunque tenga sesión.
+
+### Cómo agregar una tabla nueva
+
+1. `create table public.mi_tabla (...)` — el event trigger activa RLS y quita
+   grants automáticamente.
+2. Crea políticas explícitas (`select`, `insert`, `update`, `delete`) con
+   `to authenticated` y los helpers de arriba.
+3. Concede lo mínimo: `grant select, insert, update, delete on public.mi_tabla
+   to authenticated;` (RLS sigue filtrando).
+4. Verifica con `npm run db:rls`.
+
+Si creas una función `security definer`, recuerda que PostgreSQL le da
+`EXECUTE` a `PUBLIC` por defecto: haz `revoke all on function ... from public,
+anon;` y concede solo a quien corresponda.
+
+### Tablas de auditoría (append-only)
+
+Para tablas como `audit_logs`, replica el patrón de `proyectoReserva`:
+
+- `grant select` a `authenticated`, sin `insert/update/delete`.
+- Una sola política `select` para admin.
+- Los inserts los hace un trigger `security definer` o la `service_role`.
+- Sin políticas de `update`/`delete`, la tabla es inmutable desde el cliente.
+
+Por eso una tabla con "una sola política" puede estar **completa**: la ausencia
+de políticas de escritura es intencional.
 
 ## Prueba local
 
@@ -118,7 +203,7 @@ directamente** desde el panel, con una contraseña temporal y el rol asignado.
 
 | Rol | Acceso |
 | --- | --- |
-| `admin` | Panel de administración (usuarios y bandeja de solicitudes), auditorías 5S y de seguridad. |
+| `admin` | Panel de administración (usuarios y bandeja de solicitudes), auditorías 5S, de seguridad y de cómputo. |
 | `usuario` | Jefe de área / Instructor: solicitudes de compra, mantenimiento y descarte. |
 | `consultor` | Solo lectura de los módulos. |
 | `checklist` | Solo auditorías de cómputo: laboratorios, ítems y registro diario. |
@@ -169,8 +254,59 @@ El registro también valida el dominio en el navegador con
 | `/panel/descarte` | Solicitudes de descarte (usuario) |
 | `/panel/auditorias/5s` | Auditorías 5S (admin y consultor) |
 | `/panel/auditorias/seguridad` | Auditorías de seguridad (admin y consultor) |
-| `/panel/auditorias/computo` | Auditorías de cómputo (checklist y consultor) |
+| `/panel/auditorias/computo` | Auditorías de cómputo (admin, consultor y checklist) |
+| `/panel/auditorias/computo/laboratorios/[id]` | Detalle del laboratorio: computadoras y edición (solo checklist escribe) |
 | `/auth/confirm` | Confirmación de correo de Supabase |
+
+### Flujo de auditorías de cómputo
+
+El rol `checklist` registra la revisión en tres pasos:
+
+1. Elige el laboratorio de la lista.
+2. Elige el trimestre (`Q1`–`Q4`).
+3. Elige la semana (1–10). Al abrirla se cargan las computadoras del
+   laboratorio con sus ítems de Hardware y Software.
+
+La revisión es **semanal, no diaria**: hay una sola lista por semana y
+laboratorio, sin días individuales. La semana se crea la primera vez que se abre
+y queda en `borrador`. Cada ítem es un checkbox: por defecto está `pendiente` y
+solo se marca si está OK. Al completar la semana se cuentan automáticamente todos
+los checkboxes sin marcar como problemas; el total se guarda en
+`auditorias_computo.problemas` y la semana pasa a `completada` (ya no se edita).
+Las observaciones por computadora viven en `auditoria_computo_equipos` y las
+generales en `auditorias_computo.observaciones`. El año se guarda en
+`auditorias_computo.anio`, así que el mismo trimestre puede repetirse en años
+distintos. Admin y consultor ven el mismo asistente en modo lectura.
+
+El rango lunes–viernes se usa solo como **etiqueta** de la semana; no se guarda
+ninguna fecha de revisión por día.
+
+Las computadoras ya no tienen una lista global: se administran desde el
+**detalle del laboratorio** (enlace "Abrir" en la lista de laboratorios).
+Ahí el rol `checklist` puede editar los datos del laboratorio, agregar, editar,
+activar/desactivar y eliminar computadoras. Los ítems del checklist también se
+pueden editar desde la pestaña `Ítems`. Admin y consultor solo leen.
+
+### Descarga de Excel
+
+En `/panel/auditorias/computo` hay un formulario **Descargar checklist en Excel**
+para admin, checklist y consultor. Permite elegir año, trimestre, semana y modo:
+
+- **Resultados guardados**: incluye los checks y las observaciones de la semana.
+- **Plantilla en blanco**: hojas listas para imprimir o llenar fuera del sistema.
+
+El endpoint es `GET /api/auditorias/computo/excel?anio=2026&trimestre=Q4&semana=6&modo=resultados`.
+Solo acepta años válidos, trimestres `Q1`–`Q4`, semanas `1`–`10` y los dos modos
+anteriores. Valida sesión activa y rol en servidor; sin sesión responde `401` y
+con un rol sin acceso responde `403`.
+
+El archivo trae una hoja por **laboratorio activo**, con el mismo bloque
+HARDWARE/SOFTWARE del formato usado hasta ahora, más encabezado con trimestre,
+semana y rango lunes–viernes, columnas y filas dinámicas, observaciones por
+computadora, resumen de problemas, encabezados congelados y ajuste de impresión.
+Antes de descargar se muestra un aviso con la lista de laboratorios activos que
+todavía no tienen registro para la semana elegida; esas hojas se exportan como
+plantilla.
 
 ## Integración con LabHub
 
@@ -205,6 +341,7 @@ npm run dev      # desarrollo
 npm run lint     # ESLint
 npm run build    # build de producción
 npm run start    # producción local
+npm run db:rls   # audita RLS; falla si una tabla quedó expuesta
 ```
 
 Verificación antes de cerrar una tarea:
@@ -213,6 +350,7 @@ Verificación antes de cerrar una tarea:
 npm run lint
 npx tsc --noEmit
 npm run build
+npm run db:rls
 ```
 
 ## Estado
@@ -227,4 +365,4 @@ npm run build
 - [ ] Módulo de descarte
 - [ ] Auditorías 5S
 - [ ] Auditorías de seguridad
-- [ ] Auditorías de cómputo
+- [x] Auditorías de cómputo
