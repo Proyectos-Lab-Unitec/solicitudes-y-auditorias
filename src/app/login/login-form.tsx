@@ -101,7 +101,9 @@ export function LoginForm({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold text-texto">Iniciar sesión</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-texto">
+          Iniciar sesión
+        </h2>
         <p className="mt-1 text-sm text-tenue">
           Accede con tu correo institucional.
         </p>

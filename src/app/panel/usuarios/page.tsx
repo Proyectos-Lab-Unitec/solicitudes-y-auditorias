@@ -22,7 +22,7 @@ function BadgeRol({ rol }: { rol: Rol }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${estilos[rol]}`}
+      className={`inline-flex rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.08em] uppercase ring-1 ring-inset ${estilos[rol]}`}
     >
       {ETIQUETA_ROL[rol]}
     </span>
@@ -32,12 +32,17 @@ function BadgeRol({ rol }: { rol: Rol }) {
 function BadgeEstado({ activo }: { activo: boolean }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.08em] uppercase ring-1 ring-inset ${
         activo
           ? "bg-green-50 text-green-700 ring-green-100"
           : "bg-amber-50 text-amber-700 ring-amber-100"
       }`}
     >
+      <span
+        className={`size-1.5 rounded-full ${
+          activo ? "bg-green-600" : "bg-amber-600"
+        }`}
+      />
       {activo ? "Activo" : "Pendiente"}
     </span>
   );
@@ -51,6 +56,17 @@ function formatearFecha(valor: string | null) {
     month: "short",
     year: "numeric",
   }).format(new Date(valor));
+}
+
+function iniciales(nombre: string) {
+  return (
+    nombre
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase())
+      .join("") || "U"
+  );
 }
 
 export default async function UsuariosPage({
@@ -116,37 +132,42 @@ export default async function UsuariosPage({
     <div className="space-y-6">
       <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold tracking-[0.16em] text-acento uppercase">
-            Administración
+          <p className="etiqueta-tecnica text-[9px] text-acento">
+            Administración / Usuarios
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-texto">
-            Usuarios
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-texto">
+            Directorio de usuarios
           </h1>
           <p className="mt-1 text-sm text-tenue">
             Aprueba cuentas, asigna roles y controla el acceso al sistema.
           </p>
         </div>
-        <p className="text-sm text-tenue">
-          Mostrando <strong className="text-texto">{usuarios.length}</strong> de{" "}
-          {resumen.total}
+        <p className="etiqueta-tecnica text-[9px] text-tenue">
+          Mostrando {usuarios.length} de {resumen.total}
         </p>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 overflow-hidden rounded-xl border border-borde bg-tarjeta sm:grid-cols-4">
         {[
           { etiqueta: "Total", valor: resumen.total },
           { etiqueta: "Activos", valor: resumen.activos },
           { etiqueta: "Pendientes", valor: resumen.pendientes },
           { etiqueta: "Administradores", valor: resumen.admins },
-        ].map((item) => (
+        ].map((item, indice) => (
           <div
             key={item.etiqueta}
-            className="rounded-xl bg-tarjeta px-4 py-3 shadow-sm ring-1 ring-borde"
+            className={`p-4 ${
+              indice % 2 === 1 ? "border-l border-borde" : ""
+            } ${indice >= 2 ? "border-t border-borde sm:border-t-0" : ""} ${
+              indice > 0 ? "sm:border-l sm:border-borde" : ""
+            }`}
           >
-            <p className="text-[11px] font-semibold tracking-wider text-tenue uppercase">
+            <p className="etiqueta-tecnica text-[9px] text-tenue">
               {item.etiqueta}
             </p>
-            <p className="mt-1 text-2xl font-bold text-texto">{item.valor}</p>
+            <p className="mt-1 text-2xl font-semibold text-texto">
+              {item.valor}
+            </p>
           </div>
         ))}
       </section>
@@ -159,7 +180,7 @@ export default async function UsuariosPage({
 
       <NuevoUsuarioForm />
 
-      <form className="flex flex-col gap-3 rounded-2xl bg-tarjeta p-4 shadow-sm ring-1 ring-borde sm:flex-row sm:items-center">
+      <form className="flex flex-col gap-3 rounded-xl border border-borde bg-tarjeta p-3 sm:flex-row sm:items-center">
         <input
           name="q"
           defaultValue={busqueda}
@@ -193,10 +214,10 @@ export default async function UsuariosPage({
         )}
       </form>
 
-      <div className="overflow-hidden rounded-2xl bg-tarjeta shadow-sm ring-1 ring-borde">
+      <div className="overflow-hidden rounded-xl border border-borde bg-tarjeta">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-superficie-clara text-[11px] tracking-wider text-tenue uppercase">
+          <table className="w-full min-w-[960px] text-left text-sm">
+            <thead className="bg-superficie-clara etiqueta-tecnica text-[9px] text-tenue">
               <tr>
                 <th className="px-4 py-3 font-semibold">Nombre</th>
                 <th className="px-4 py-3 font-semibold">Correo</th>
@@ -213,8 +234,15 @@ export default async function UsuariosPage({
                   key={usuario.id}
                   className="border-t border-borde transition-colors hover:bg-superficie-clara/60"
                 >
-                  <td className="px-4 py-3 font-medium text-texto">
-                    {usuario.nombre}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-superficie-clara text-[10px] font-semibold text-acento ring-1 ring-borde">
+                        {iniciales(usuario.nombre)}
+                      </span>
+                      <span className="font-medium text-texto">
+                        {usuario.nombre}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-tenue">{usuario.correo}</td>
                   <td className="px-4 py-3">
@@ -226,13 +254,15 @@ export default async function UsuariosPage({
                   <td className="px-4 py-3">
                     <BadgeEstado activo={usuario.activo} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-tenue">
+                  <td className="px-4 py-3 etiqueta-tecnica text-[9px] text-tenue">
                     {formatearFecha(usuario.creado_en)}
                   </td>
                   <td className="px-4 py-3">
                     <UsuarioAcciones
                       id={usuario.id}
                       nombre={usuario.nombre}
+                      correo={usuario.correo}
+                      area={usuario.area}
                       rol={usuario.rol}
                       activo={usuario.activo}
                       esPropio={usuario.id === adminActual.id}

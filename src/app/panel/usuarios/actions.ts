@@ -253,3 +253,134 @@ export async function eliminarUsuario(id: string): Promise<EstadoAccion> {
     };
   }
 }
+
+export async function actualizarUsuario(
+  id: string,
+  datos: {
+    nombre: string;
+    correo: string;
+    area: string;
+    password: string;
+  }
+): Promise<EstadoAccion> {
+  const admin = await exigirAdmin();
+  if (!admin) return { ok: false, error: "No autorizado." };
+
+  const nombre = datos.nombre.trim();
+  const correo = datos.correo.trim().toLowerCase();
+  const area = datos.area.trim();
+  const password = datos.password.trim();
+
+  if (nombre.length < 3) {
+    return { ok: false, error: "Escribe el nombre completo." };
+  }
+
+  if (!correo || !esCorreoInstitucional(correo)) {
+    return { ok: false, error: "Usa un correo institucional válido." };
+  }
+
+  if (password && password.length < 8) {
+    return {
+      ok: false,
+      error: "La nueva contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data: actual, error: actualError } = await supabase
+      .from("perfiles")
+      .select("correo")
+      .eq("id", id)
+      .single();
+
+    if (actualError || !actual) {
+      return { ok: false, error: "Usuario no encontrado." };
+    }
+
+    const cambioCorreo = correo !== actual.correo;
+
+    if (cambioCorreo && id === admin.id) {
+      return { ok: false, error: "No puedes cambiar tu propio correo." };
+    }
+
+    if (cambioCorreo) {
+      const { data: existente } = await supabase
+        .from("perfiles")
+        .select("id")
+        .eq("correo", correo)
+        .neq("id", id)
+        .maybeSingle();
+
+      if (existente) {
+        return {
+          ok: false,
+          error: "Ese correo ya está en uso por otro usuario.",
+        };
+      }
+    }
+
+    const cambiosAuth: {
+      email?: string;
+      email_confirm?: boolean;
+      password?: string;
+      user_metadata: { nombre: string };
+    } = { user_metadata: { nombre } };
+
+    if (cambioCorreo) {
+      cambiosAuth.email = correo;
+      cambiosAuth.email_confirm = true;
+    }
+
+    if (password) {
+      cambiosAuth.password = password;
+    }
+
+    const { error: authError } = await supabase.auth.admin.updateUserById(
+      id,
+      cambiosAuth
+    );
+
+    if (authError) {
+      return {
+        ok: false,
+        error: authError.message.includes("already been registered")
+          ? "Ese correo ya está registrado."
+          : authError.message,
+      };
+    }
+
+    const { error: perfilError } = await supabase
+      .from("perfiles")
+      .update({ nombre, correo, area: area || null })
+      .eq("id", id);
+
+    if (perfilError) {
+      // Si el perfil no se pudo actualizar, intenta devolver el correo de Auth.
+      if (cambioCorreo) {
+        try {
+          await supabase.auth.admin.updateUserById(id, {
+            email: actual.correo,
+            email_confirm: true,
+          });
+        } catch {
+          // Se reporta el error original del perfil.
+        }
+      }
+
+      return { ok: false, error: perfilError.message };
+    }
+
+    revalidatePath("/panel/usuarios");
+    return { ok: true, mensaje: "Usuario actualizado." };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el usuario.",
+    };
+  }
+}

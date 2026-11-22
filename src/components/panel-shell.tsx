@@ -27,10 +27,10 @@ import type { Perfil } from "@/lib/types";
 type Item = {
   href: string;
   label: string;
+  codigo: string;
   icono: IconType;
   modulo?: Modulo;
   exacto?: boolean;
-  pronto?: boolean;
 };
 
 export function PanelShell({
@@ -45,67 +45,81 @@ export function PanelShell({
   const [saliendo, setSaliendo] = useState(false);
 
   const todos: Item[] = [
-    { href: "/panel", label: "Panel", icono: FiHome, exacto: true },
+    { href: "/panel", label: "Panel", codigo: "P", icono: FiHome, exacto: true },
     {
       modulo: "usuarios",
       href: "/panel/usuarios",
       label: "Usuarios",
+      codigo: "USR",
       icono: FiUsers,
     },
     {
       modulo: "solicitudes",
       href: "/panel/solicitudes",
       label: "Solicitudes",
+      codigo: "SOL",
       icono: FiInbox,
-      pronto: true,
     },
     {
       modulo: "compras",
       href: "/panel/compras",
       label: "Compras",
+      codigo: "SC",
       icono: FiShoppingCart,
-      pronto: true,
     },
     {
       modulo: "mantenimiento",
       href: "/panel/mantenimiento",
       label: "Mantenimiento",
+      codigo: "SM",
       icono: FiTool,
-      pronto: true,
     },
     {
       modulo: "descarte",
       href: "/panel/descarte",
       label: "Descarte",
+      codigo: "SD",
       icono: FiTrash2,
-      pronto: true,
     },
     {
       modulo: "auditorias-5s",
       href: "/panel/auditorias/5s",
       label: "Auditorías 5S",
+      codigo: "A5S",
       icono: FiCheckSquare,
-      pronto: true,
     },
     {
       modulo: "auditorias-seguridad",
       href: "/panel/auditorias/seguridad",
       label: "Auditorías de seguridad",
+      codigo: "AS",
       icono: FiShield,
-      pronto: true,
     },
     {
       modulo: "auditorias-computo",
       href: "/panel/auditorias/computo",
       label: "Auditorías de cómputo",
+      codigo: "AC",
       icono: FiMonitor,
-      pronto: true,
     },
   ];
 
   const items = todos.filter(
     (item) => !item.modulo || puedeVerModulo(perfil.rol, item.modulo)
   );
+
+  const seccion =
+    items.find(
+      (item) => item.href !== "/panel" && pathname.startsWith(item.href)
+    )?.label ?? "Panel";
+
+  const iniciales =
+    perfil.nombre
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase())
+      .join("") || "U";
 
   async function salir() {
     if (saliendo) return;
@@ -148,20 +162,22 @@ export function PanelShell({
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
+        <div className="h-0.5 w-full shrink-0 bg-acento-claro/70" />
+
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4">
           <Image
             src="/unitec-logo.png"
             alt="UNITEC"
             width={32}
             height={32}
-            className="size-8 rounded-md bg-white/10 p-1"
+            className="size-9 rounded-lg bg-white/10 p-1 ring-1 ring-white/15"
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight">
               Gestión de Laboratorios
             </p>
-            <p className="truncate text-[11px] text-acento-claro">
-              Coordinación de Ingeniería
+            <p className="etiqueta-tecnica truncate text-[9px] text-acento-claro">
+              Coordinación · UNITEC
             </p>
           </div>
           <button
@@ -174,7 +190,7 @@ export function PanelShell({
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
           {items.map((item) => {
             const Icono = item.icono;
             const actual = estaActivo(item);
@@ -184,34 +200,46 @@ export function PanelShell({
                 key={item.href}
                 href={item.href}
                 onClick={() => setAbierto(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                title={item.label}
+                aria-current={actual ? "page" : undefined}
+                className={`relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
                   actual
-                    ? "bg-white/15 font-semibold text-white"
+                    ? "bg-white/10 font-semibold text-white"
                     : "text-blue-200 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <Icono className="size-4 shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {item.pronto && (
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-acento-claro">
-                    Pronto
-                  </span>
+                {actual && (
+                  <span className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-acento-claro" />
                 )}
+                <Icono className="size-4 shrink-0" />
+                <span className="flex-1 truncate">{item.label}</span>
+                <span
+                  className={`etiqueta-tecnica text-[9px] ${
+                    actual ? "text-acento-claro" : "text-blue-400/60"
+                  }`}
+                >
+                  {item.codigo}
+                </span>
               </Link>
             );
           })}
         </nav>
 
         <div className="border-t border-white/10 p-3">
-          <div className="mb-2 rounded-lg bg-white/5 p-3">
-            <p className="truncate text-sm font-semibold">{perfil.nombre}</p>
-            <p className="truncate text-[11px] text-acento-claro">
-              {perfil.correo}
-            </p>
-            <p className="mt-1 text-[10px] font-medium tracking-wider text-blue-300 uppercase">
-              {ETIQUETA_ROL[perfil.rol]}
-            </p>
+          <div className="mb-2 flex items-center gap-3 rounded-lg bg-white/5 p-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-white ring-1 ring-white/15">
+              {iniciales}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{perfil.nombre}</p>
+              <p className="truncate text-[11px] text-acento-claro">
+                {perfil.correo}
+              </p>
+            </div>
           </div>
+          <p className="etiqueta-tecnica mb-2 px-1 text-[9px] text-blue-300/70">
+            {ETIQUETA_ROL[perfil.rol]}
+          </p>
           <button
             type="button"
             onClick={salir}
@@ -235,15 +263,18 @@ export function PanelShell({
             <FiMenu className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-texto">
-              Panel de gestión
+            <p className="etiqueta-tecnica text-[9px] text-tenue">
+              Gestión de laboratorios
             </p>
-            <p className="truncate text-[11px] text-tenue">
-              Coordinación de Laboratorios de Ingeniería · UNITEC
+            <p className="truncate text-sm font-semibold text-texto">
+              {seccion}
             </p>
           </div>
-          <span className="hidden rounded-full bg-superficie-clara px-3 py-1 text-xs font-medium text-tenue sm:inline">
-            Rol: {ETIQUETA_ROL[perfil.rol]}
+          <span className="hidden items-center gap-2 rounded-md border border-borde bg-superficie-clara px-2.5 py-1 sm:inline-flex">
+            <span className="size-1.5 rounded-full bg-acento" />
+            <span className="etiqueta-tecnica text-[9px] text-tenue">
+              {ETIQUETA_ROL[perfil.rol]}
+            </span>
           </span>
         </header>
 

@@ -18,7 +18,7 @@ export const ETIQUETA_ROL: Record<Rol, string> = {
 };
 
 export const DESCRIPCION_ROL: Record<Rol, string> = {
-  admin: "Administración, auditorías 5S y de seguridad",
+  admin: "Administración, auditorías 5S, de seguridad y de cómputo",
   usuario: "Jefe de área / Instructor: compras, mantenimiento y descarte",
   consultor: "Consulta de solo lectura",
   checklist: "Auditorías de cómputo",
@@ -33,7 +33,13 @@ export const DESCRIPCION_ROL: Record<Rol, string> = {
  * ve todo en modo lectura.
  */
 export const MODULOS_POR_ROL: Record<Rol, Modulo[]> = {
-  admin: ["usuarios", "solicitudes", "auditorias-5s", "auditorias-seguridad"],
+  admin: [
+    "usuarios",
+    "solicitudes",
+    "auditorias-5s",
+    "auditorias-seguridad",
+    "auditorias-computo",
+  ],
   usuario: ["compras", "mantenimiento", "descarte"],
   checklist: ["auditorias-computo"],
   consultor: [

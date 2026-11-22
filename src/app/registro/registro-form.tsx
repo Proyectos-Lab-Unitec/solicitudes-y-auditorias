@@ -96,7 +96,9 @@ export function RegistroForm({ next = "/panel" }: { next?: string }) {
           ✓
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-texto">Cuenta creada</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-texto">
+            Cuenta creada
+          </h2>
           <p className="mt-2 text-sm leading-6 text-tenue">
             Revisa tu correo institucional si se te pidió confirmación. Después,
             un administrador debe <strong>aprobar tu cuenta</strong> y asignarte
@@ -120,7 +122,9 @@ export function RegistroForm({ next = "/panel" }: { next?: string }) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold text-texto">Crear cuenta</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-texto">
+          Crear cuenta
+        </h2>
         <p className="mt-1 text-sm text-tenue">
           Regístrate con tu correo institucional. Un administrador aprobará tu
           acceso.

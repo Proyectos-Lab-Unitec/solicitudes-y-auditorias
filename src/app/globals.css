@@ -2,22 +2,24 @@
 
 /*
  * Identidad visual compartida con LabHub y Asistencias de Laboratorios.
+ * La capa técnica (rejilla, códigos y reglas) es propia de este sistema.
  */
 :root {
   color-scheme: light;
-  --background: #f3f4f6;
-  --foreground: #171717;
+  --background: #f6f8fc;
+  --foreground: #0a1633;
 
   --fondo: #07065d;
   --fondo-profundo: #04042e;
   --superficie-azul: #06065c;
   --acento: #0f49b6;
   --acento-claro: #6ea2ff;
-  --superficie-clara: #f3f4f6;
+  --superficie-clara: #f6f8fc;
   --tarjeta: #ffffff;
-  --borde: #e3e8f2;
+  --borde: #dfe5f0;
+  --borde-fuerte: #c9d3e5;
   --texto: #0a1633;
-  --tenue: #56648a;
+  --tenue: #5b678a;
 }
 
 @theme inline {
@@ -31,6 +33,7 @@
   --color-superficie-clara: var(--superficie-clara);
   --color-tarjeta: var(--tarjeta);
   --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
   --color-texto: var(--texto);
   --color-tenue: var(--tenue);
   --font-sans: var(--font-geist-sans);
@@ -45,4 +48,57 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Etiqueta técnica: códigos de módulo, metadatos y estados.
+ * Es el hilo conductor visual del sistema.
+ */
+.etiqueta-tecnica {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Rejilla de plano para superficies azules. */
+.rejilla-tecnica {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-position: center;
+}
+
+/* Rejilla sutil para superficies claras. */
+.rejilla-clara {
+  background-image:
+    linear-gradient(to right, rgb(10 22 51 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(10 22 51 / 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Sombra contenida, sin el halo difuso de las tarjetas genéricas. */
+.sombra-tarjeta {
+  box-shadow:
+    0 1px 2px rgb(10 22 51 / 0.04),
+    0 14px 34px -28px rgb(10 22 51 / 0.4);
+}
+
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

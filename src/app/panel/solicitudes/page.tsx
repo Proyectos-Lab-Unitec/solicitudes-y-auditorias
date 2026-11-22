@@ -38,16 +38,16 @@ export default async function SolicitudesPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl bg-tarjeta p-6 shadow-sm ring-1 ring-borde sm:p-8">
+      <section className="rounded-xl border border-borde bg-tarjeta p-6 sm:p-8">
         <div className="flex items-start gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-superficie-clara text-acento">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-superficie-clara text-acento ring-1 ring-borde">
             <FiInbox className="size-6" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-[0.16em] text-acento uppercase">
-              Administración
+            <p className="etiqueta-tecnica text-[9px] text-acento">
+              Administración / Solicitudes
             </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-texto">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-texto">
               Bandeja de solicitudes
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-tenue">
@@ -65,13 +65,13 @@ export default async function SolicitudesPage() {
           return (
             <div
               key={tipo.titulo}
-              className="rounded-2xl bg-tarjeta p-5 shadow-sm ring-1 ring-borde"
+              className="rounded-xl border border-borde bg-tarjeta p-5"
             >
               <div className="flex items-start justify-between gap-3">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-superficie-clara text-acento">
+                <span className="flex size-11 items-center justify-center rounded-lg bg-superficie-clara text-acento ring-1 ring-borde">
                   <Icono className="size-5" />
                 </span>
-                <span className="rounded-full bg-superficie-clara px-2.5 py-1 text-[10px] font-semibold tracking-wider text-tenue uppercase">
+                <span className="etiqueta-tecnica rounded-md border border-borde bg-superficie-clara px-2 py-1 text-[9px] text-tenue">
                   Pronto
                 </span>
               </div>

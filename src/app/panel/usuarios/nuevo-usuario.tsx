@@ -22,10 +22,15 @@ export function NuevoUsuarioForm() {
   }, [estado]);
 
   return (
-    <section className="rounded-2xl bg-tarjeta shadow-sm ring-1 ring-borde">
+    <section className="rounded-xl border border-borde bg-tarjeta">
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
         <div>
-          <h2 className="text-base font-semibold text-texto">Nuevo usuario</h2>
+          <p className="etiqueta-tecnica text-[9px] text-acento">
+            Alta de usuario
+          </p>
+          <h2 className="mt-1 text-base font-semibold text-texto">
+            Nuevo usuario
+          </h2>
           <p className="text-sm text-tenue">
             Crea una cuenta activa con contraseña temporal.
           </p>
