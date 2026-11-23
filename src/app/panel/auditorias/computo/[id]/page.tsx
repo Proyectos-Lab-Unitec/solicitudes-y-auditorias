@@ -4,15 +4,19 @@ import { connection } from "next/server";
 import { requireModulo } from "@/lib/auth";
 import {
   CLASE_AUDITORIA,
-  CLASE_RESPUESTA,
   ETIQUETA_AUDITORIA,
-  ETIQUETA_RESPUESTA,
+  formatearFechaHora,
   formatearSemana,
   type EstadoAuditoria,
-  type EstadoRespuesta,
 } from "@/lib/computo";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  BuscadorComputadoras,
+  ProveedorBusquedaComputadoras,
+} from "../busqueda-computadoras";
 import { FormularioSemana } from "../formulario-semana";
+import { RevisionSoloLectura } from "./revision-solo-lectura";
+import { ReabrirSemana } from "./reabrir-semana";
 
 export const instant = false;
 
@@ -26,16 +30,6 @@ function BadgeEstado({ estado }: { estado: EstadoAuditoria }) {
       className={`inline-flex rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.08em] uppercase ring-1 ring-inset ${CLASE_AUDITORIA[estado]}`}
     >
       {ETIQUETA_AUDITORIA[estado]}
-    </span>
-  );
-}
-
-function BadgeRespuesta({ estado }: { estado: EstadoRespuesta }) {
-  return (
-    <span
-      className={`inline-flex rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.08em] uppercase ring-1 ring-inset ${CLASE_RESPUESTA[estado]}`}
-    >
-      {ETIQUETA_RESPUESTA[estado]}
     </span>
   );
 }
@@ -149,23 +143,11 @@ export default async function AuditoriaComputoDetallePage({
     return item.activo;
   });
 
-  const itemsHardware = itemsVisibles.filter(
-    (item) => item.categoria === "Hardware"
-  );
-  const itemsSoftware = itemsVisibles.filter(
-    (item) => item.categoria === "Software"
-  );
-
-  const equipoPorComputadora = new Map(
-    equiposLista.map((equipo) => [equipo.computadora_id, equipo])
-  );
-
-  const respuestaPorClave = new Map(
-    respuestasLista.map((respuesta) => [
-      `${respuesta.computadora_id}:${respuesta.item_id}`,
-      respuesta.estado as EstadoRespuesta,
-    ])
-  );
+  const computadorasParaBusqueda = computadorasVisibles.map((computadora) => ({
+    id: computadora.id,
+    codigo: computadora.codigo,
+    nombre: computadora.nombre,
+  }));
 
   const computadorasActivas = ((computadoras ?? []) as Array<{
     activo: boolean;
@@ -259,168 +241,75 @@ export default async function AuditoriaComputoDetallePage({
             </p>
           </div>
         </div>
+
+        {auditoria.estado === "completada" && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-green-100 bg-green-50/60 px-3 py-2.5">
+            <p className="text-sm text-green-900">
+              <span className="etiqueta-tecnica text-[9px] text-green-700">
+                Completado en:{" "}
+              </span>
+              <span className="font-medium">
+                {formatearFechaHora(auditoria.completado_en)}
+              </span>
+            </p>
+            {esChecklist && <ReabrirSemana auditoriaId={auditoria.id} />}
+          </div>
+        )}
       </section>
 
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold tracking-tight text-texto">
-          Revisión de la semana
-        </h2>
-        <span className="etiqueta-tecnica text-[9px] text-tenue">
-          {computadorasVisibles.length} computadora(s) · una sola lista
-        </span>
-      </div>
+      <ProveedorBusquedaComputadoras computadoras={computadorasParaBusqueda}>
+        <BuscadorComputadoras />
 
-      {editable ? (
-        <FormularioSemana
-          auditoriaId={auditoria.id}
-          computadoras={computadorasVisibles.map((computadora) => ({
-            id: computadora.id,
-            codigo: computadora.codigo,
-            nombre: computadora.nombre,
-          }))}
-          items={itemsVisibles.map((item) => ({
-            id: item.id,
-            nombre: item.nombre,
-            categoria: item.categoria,
-          }))}
-          equipos={equiposLista.map((equipo) => ({
-            computadoraId: equipo.computadora_id,
-            observacionHardware: equipo.observacion_hardware,
-            observacionSoftware: equipo.observacion_software,
-          }))}
-          respuestas={respuestasLista.map((respuesta) => ({
-            computadoraId: respuesta.computadora_id,
-            itemId: respuesta.item_id,
-            estado: respuesta.estado,
-          }))}
-          observaciones={auditoria.observaciones}
-        />
-      ) : (
-        <div className="space-y-4">
-          {computadorasVisibles.map((computadora) => {
-            const equipo = equipoPorComputadora.get(computadora.id);
-
-            return (
-              <article
-                key={computadora.id}
-                className="overflow-hidden rounded-xl border border-borde bg-tarjeta"
-              >
-                <header className="flex items-center justify-between gap-3 border-b border-borde bg-superficie-clara/60 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-8 items-center justify-center rounded-md bg-tarjeta text-[10px] font-semibold text-acento ring-1 ring-borde">
-                      {computadora.codigo}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-texto">
-                        {computadora.codigo}
-                      </p>
-                      {computadora.nombre && (
-                        <p className="text-[11px] text-tenue">
-                          {computadora.nombre}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <span className="etiqueta-tecnica text-[9px] text-tenue">
-                    Equipo
-                  </span>
-                </header>
-
-                <div className="grid gap-5 p-4 lg:grid-cols-2">
-                  <section>
-                    <p className="etiqueta-tecnica text-[9px] text-acento">
-                      Hardware
-                    </p>
-                    <div className="mt-2 space-y-1.5">
-                      {itemsHardware.map((item) => {
-                        const estado =
-                          respuestaPorClave.get(
-                            `${computadora.id}:${item.id}`
-                          ) ?? "pendiente";
-                        return (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-borde px-3 py-2"
-                          >
-                            <span className="text-sm text-texto">
-                              {item.nombre}
-                            </span>
-                            <BadgeRespuesta estado={estado} />
-                          </div>
-                        );
-                      })}
-                      {itemsHardware.length === 0 && (
-                        <p className="text-xs text-tenue">Sin ítems.</p>
-                      )}
-                    </div>
-                    {equipo?.observacion_hardware && (
-                      <p className="mt-2 text-xs leading-5 text-tenue">
-                        <span className="font-semibold text-texto">
-                          Observación:
-                        </span>{" "}
-                        {equipo.observacion_hardware}
-                      </p>
-                    )}
-                  </section>
-
-                  <section>
-                    <p className="etiqueta-tecnica text-[9px] text-acento">
-                      Software
-                    </p>
-                    <div className="mt-2 space-y-1.5">
-                      {itemsSoftware.map((item) => {
-                        const estado =
-                          respuestaPorClave.get(
-                            `${computadora.id}:${item.id}`
-                          ) ?? "pendiente";
-                        return (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-borde px-3 py-2"
-                          >
-                            <span className="text-sm text-texto">
-                              {item.nombre}
-                            </span>
-                            <BadgeRespuesta estado={estado} />
-                          </div>
-                        );
-                      })}
-                      {itemsSoftware.length === 0 && (
-                        <p className="text-xs text-tenue">Sin ítems.</p>
-                      )}
-                    </div>
-                    {equipo?.observacion_software && (
-                      <p className="mt-2 text-xs leading-5 text-tenue">
-                        <span className="font-semibold text-texto">
-                          Observación:
-                        </span>{" "}
-                        {equipo.observacion_software}
-                      </p>
-                    )}
-                  </section>
-                </div>
-              </article>
-            );
-          })}
-
-          {computadorasVisibles.length === 0 && (
-            <div className="rounded-xl border border-dashed border-borde bg-superficie-clara p-6 text-sm text-tenue">
-              Este laboratorio no tiene computadoras registradas.
-            </div>
-          )}
-
-          {auditoria.observaciones && (
-            <div className="rounded-xl border border-borde bg-tarjeta p-4">
-              <p className="etiqueta-tecnica text-[9px] text-tenue">
-                Observaciones de la semana
-              </p>
-              <p className="mt-1 text-sm leading-6 whitespace-pre-line text-texto">
-                {auditoria.observaciones}
-              </p>
-            </div>
-          )}
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold tracking-tight text-texto">
+            Revisión de la semana
+          </h2>
+          
         </div>
-      )}
+
+        {editable ? (
+          <FormularioSemana
+            auditoriaId={auditoria.id}
+            computadoras={computadorasParaBusqueda}
+            items={itemsVisibles.map((item) => ({
+              id: item.id,
+              nombre: item.nombre,
+              categoria: item.categoria,
+            }))}
+            equipos={equiposLista.map((equipo) => ({
+              computadoraId: equipo.computadora_id,
+              observacionHardware: equipo.observacion_hardware,
+              observacionSoftware: equipo.observacion_software,
+            }))}
+            respuestas={respuestasLista.map((respuesta) => ({
+              computadoraId: respuesta.computadora_id,
+              itemId: respuesta.item_id,
+              estado: respuesta.estado,
+            }))}
+            observaciones={auditoria.observaciones}
+          />
+        ) : (
+          <RevisionSoloLectura
+            computadoras={computadorasParaBusqueda}
+            items={itemsVisibles.map((item) => ({
+              id: item.id,
+              nombre: item.nombre,
+              categoria: item.categoria,
+            }))}
+            equipos={equiposLista.map((equipo) => ({
+              computadoraId: equipo.computadora_id,
+              observacionHardware: equipo.observacion_hardware,
+              observacionSoftware: equipo.observacion_software,
+            }))}
+            respuestas={respuestasLista.map((respuesta) => ({
+              computadoraId: respuesta.computadora_id,
+              itemId: respuesta.item_id,
+              estado: respuesta.estado,
+            }))}
+            observaciones={auditoria.observaciones}
+          />
+        )}
+      </ProveedorBusquedaComputadoras>
     </div>
   );
 }

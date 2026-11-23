@@ -8,7 +8,8 @@ export type Modulo =
   | "descarte"
   | "auditorias-5s"
   | "auditorias-seguridad"
-  | "auditorias-computo";
+  | "auditorias-computo"
+  | "configuracion-trimestres";
 
 export const ETIQUETA_ROL: Record<Rol, string> = {
   admin: "Administrador",
@@ -39,9 +40,10 @@ export const MODULOS_POR_ROL: Record<Rol, Modulo[]> = {
     "auditorias-5s",
     "auditorias-seguridad",
     "auditorias-computo",
+    "configuracion-trimestres",
   ],
   usuario: ["compras", "mantenimiento", "descarte"],
-  checklist: ["auditorias-computo"],
+  checklist: ["auditorias-computo", "configuracion-trimestres"],
   consultor: [
     "compras",
     "mantenimiento",
@@ -54,4 +56,9 @@ export const MODULOS_POR_ROL: Record<Rol, Modulo[]> = {
 
 export function puedeVerModulo(rol: Rol, modulo: Modulo) {
   return MODULOS_POR_ROL[rol].includes(modulo);
+}
+
+/** Admin y checklist son los únicos que pueden editar el calendario. */
+export function puedeConfigurarTrimestres(rol: Rol) {
+  return rol === "admin" || rol === "checklist";
 }

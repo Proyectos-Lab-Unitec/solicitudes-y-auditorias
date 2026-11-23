@@ -29,9 +29,15 @@ type Semana = {
   } | null;
 };
 
-function hrefAsistente(lab: string, trimestre: Trimestre | null) {
-  const params = new URLSearchParams({ vista: "auditorias", lab });
+function hrefAsistente(
+  lab: string,
+  trimestre: Trimestre | null,
+  anio: number
+) {
+  const params = new URLSearchParams({ vista: "auditorias" });
+  if (lab) params.set("lab", lab);
   if (trimestre) params.set("trimestre", trimestre);
+  params.set("anio", String(anio));
   return `/panel/auditorias/computo?${params.toString()}`;
 }
 
@@ -96,6 +102,7 @@ export function AsistenteSemana({
   labId,
   trimestre,
   anio,
+  configuracion,
   semanas,
   esChecklist,
   computadorasActivas,
@@ -106,6 +113,10 @@ export function AsistenteSemana({
   labId: string;
   trimestre: Trimestre | null;
   anio: number;
+  configuracion: Record<
+    string,
+    { fecha_inicio: string; configurado: boolean }
+  >;
   semanas: Semana[];
   esChecklist: boolean;
   computadorasActivas: number;
@@ -135,9 +146,37 @@ export function AsistenteSemana({
               : "Elige el laboratorio, el trimestre y la semana para consultar su revisión."}
           </p>
         </div>
-        <span className="etiqueta-tecnica rounded-md border border-borde bg-superficie-clara px-2 py-1 text-[9px] text-tenue">
-          {anio}
-        </span>
+        <form
+          method="get"
+          action="/panel/auditorias/computo"
+          className="flex items-end gap-2 rounded-lg border border-borde bg-tarjeta p-2"
+        >
+          <input type="hidden" name="vista" value="auditorias" />
+          {labId && <input type="hidden" name="lab" value={labId} />}
+          {trimestre && (
+            <input type="hidden" name="trimestre" value={trimestre} />
+          )}
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-semibold tracking-[0.08em] uppercase text-tenue">
+              Año
+            </span>
+            <input
+              type="number"
+              name="anio"
+              min={2000}
+              max={2100}
+              defaultValue={anio}
+              aria-label="Año de la revisión"
+              className="w-28 rounded-lg border border-borde bg-white px-3 py-2 text-sm font-semibold text-texto outline-none transition focus:border-superficie-azul focus:ring-2 focus:ring-superficie-azul/20"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-lg border border-borde bg-superficie-clara px-3 py-2 text-sm font-semibold text-texto transition hover:border-acento hover:bg-white"
+          >
+            Ir
+          </button>
+        </form>
       </div>
 
       {error && (
@@ -170,7 +209,7 @@ export function AsistenteSemana({
                 return (
                   <Link
                     key={laboratorio.id}
-                    href={hrefAsistente(laboratorio.id, trimestre)}
+                    href={hrefAsistente(laboratorio.id, trimestre, anio)}
                     className={`rounded-lg border px-3 py-2.5 transition ${
                       activo
                         ? "border-superficie-azul bg-superficie-azul text-white"
@@ -211,18 +250,26 @@ export function AsistenteSemana({
             <div className="mt-2 grid grid-cols-4 gap-2">
               {TRIMESTRES.map((opcion) => {
                 const activo = opcion === trimestre;
+                const config = configuracion[opcion];
 
                 return (
                   <Link
                     key={opcion}
-                    href={hrefAsistente(lab.id, opcion)}
-                    className={`rounded-lg border px-3 py-2.5 text-center text-sm font-semibold transition ${
+                    href={hrefAsistente(lab.id, opcion, anio)}
+                    className={`rounded-lg border px-3 py-2.5 text-center transition ${
                       activo
                         ? "border-superficie-azul bg-superficie-azul text-white"
                         : "border-borde bg-tarjeta text-texto hover:border-acento hover:bg-superficie-clara"
                     }`}
                   >
-                    {opcion}
+                    <span className="block text-sm font-semibold">{opcion}</span>
+                    <span
+                      className={`mt-0.5 block text-[9px] font-medium ${
+                        activo ? "text-acento-claro" : "text-tenue"
+                      }`}
+                    >
+                      {config?.configurado ? "Configurado" : "Predeterminado"}
+                    </span>
                   </Link>
                 );
               })}

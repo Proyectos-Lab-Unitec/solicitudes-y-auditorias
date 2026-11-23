@@ -10,6 +10,10 @@ const RUTAS: Array<{ prefijo: string; modulo: Modulo }> = [
   { prefijo: "/panel/auditorias/5s", modulo: "auditorias-5s" },
   { prefijo: "/panel/auditorias/seguridad", modulo: "auditorias-seguridad" },
   { prefijo: "/panel/auditorias/computo", modulo: "auditorias-computo" },
+  {
+    prefijo: "/panel/configuracion/trimestres",
+    modulo: "configuracion-trimestres",
+  },
 ];
 
 function rutaLimpia(ruta: string) {

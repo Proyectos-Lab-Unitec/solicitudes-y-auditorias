@@ -263,8 +263,6 @@ export async function crearItem(
 
   const nombre = texto(formData, "nombre");
   const categoria = texto(formData, "categoria") as Categoria;
-  const ordenTexto = texto(formData, "orden");
-  const orden = Number.parseInt(ordenTexto || "0", 10);
 
   if (nombre.length < 2) {
     return { ok: false, error: "Escribe el nombre del ítem." };
@@ -276,10 +274,23 @@ export async function crearItem(
 
   try {
     const supabase = createAdminClient();
+
+    // El orden ya no se escribe a mano: el ítem nuevo entra al final de su
+    // bloque y se reordena con las flechas del listado.
+    const { data: ultimo, error: errorOrden } = await supabase
+      .from("checklist_items")
+      .select("orden")
+      .eq("categoria", categoria)
+      .order("orden", { ascending: false })
+      .limit(1);
+
+    if (errorOrden) return { ok: false, error: errorOrden.message };
+
+    const orden = (ultimo?.[0]?.orden ?? 0) + 1;
     const { error } = await supabase.from("checklist_items").insert({
       nombre,
       categoria,
-      orden: Number.isFinite(orden) ? orden : 0,
+      orden,
       creado_por: perfil.id,
     });
 
@@ -553,7 +564,7 @@ export async function actualizarComputadora(
 
 export async function actualizarItem(
   id: string,
-  datos: { nombre: string; categoria: string; orden: number }
+  datos: { nombre: string; categoria: string }
 ): Promise<EstadoAccion> {
   const perfil = await exigirChecklist();
   if (!perfil) return { ok: false, error: "No autorizado." };
@@ -572,13 +583,37 @@ export async function actualizarItem(
 
   try {
     const supabase = createAdminClient();
+
+    const { data: anterior } = await supabase
+      .from("checklist_items")
+      .select("categoria")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!anterior) return { ok: false, error: "El ítem ya no existe." };
+
+    const cambios: { nombre: string; categoria: Categoria; orden?: number } = {
+      nombre,
+      categoria,
+    };
+
+    // Si cambia de bloque, va al final de la nueva categoría para no chocar
+    // con el orden que traía de la anterior.
+    if (anterior.categoria !== categoria) {
+      const { data: ultimo, error: errorOrden } = await supabase
+        .from("checklist_items")
+        .select("orden")
+        .eq("categoria", categoria)
+        .order("orden", { ascending: false })
+        .limit(1);
+
+      if (errorOrden) return { ok: false, error: errorOrden.message };
+      cambios.orden = (ultimo?.[0]?.orden ?? 0) + 1;
+    }
+
     const { data: actualizado, error } = await supabase
       .from("checklist_items")
-      .update({
-        nombre,
-        categoria,
-        orden: Number.isFinite(datos.orden) ? datos.orden : 0,
-      })
+      .update(cambios)
       .eq("id", id)
       .select("id")
       .maybeSingle();
@@ -595,6 +630,73 @@ export async function actualizarItem(
         error instanceof Error
           ? error.message
           : "No se pudo actualizar el ítem.",
+    };
+  }
+}
+
+/**
+ * Sube o baja un ítem dentro de su categoría. Recalcula el orden de todo el
+ * bloque para que las flechas respeten el orden visible aunque haya huecos o
+ * duplicados en los datos anteriores.
+ */
+export async function moverItem(
+  id: string,
+  direccion: "arriba" | "abajo"
+): Promise<EstadoAccion> {
+  const perfil = await exigirChecklist();
+  if (!perfil) return { ok: false, error: "No autorizado." };
+  if (!id) return { ok: false, error: "Ítem inválido." };
+  if (direccion !== "arriba" && direccion !== "abajo") {
+    return { ok: false, error: "Dirección inválida." };
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data: item } = await supabase
+      .from("checklist_items")
+      .select("categoria")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!item) return { ok: false, error: "El ítem ya no existe." };
+
+    const { data: hermanos, error } = await supabase
+      .from("checklist_items")
+      .select("id, nombre, orden")
+      .eq("categoria", item.categoria)
+      .order("orden")
+      .order("nombre");
+
+    if (error) return { ok: false, error: error.message };
+
+    const lista = hermanos ?? [];
+    const indice = lista.findIndex((hermano) => hermano.id === id);
+
+    if (indice < 0) return { ok: false, error: "El ítem ya no existe." };
+
+    const destino = direccion === "arriba" ? indice - 1 : indice + 1;
+    if (destino < 0 || destino >= lista.length) {
+      return { ok: true, mensaje: "El ítem ya está en ese extremo." };
+    }
+
+    [lista[indice], lista[destino]] = [lista[destino], lista[indice]];
+
+    for (let posicion = 0; posicion < lista.length; posicion++) {
+      const { error: errorOrden } = await supabase
+        .from("checklist_items")
+        .update({ orden: posicion + 1 })
+        .eq("id", lista[posicion].id);
+
+      if (errorOrden) return { ok: false, error: errorOrden.message };
+    }
+
+    revalidar();
+    return { ok: true, mensaje: "Ítem movido." };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo mover el ítem.",
     };
   }
 }
@@ -618,6 +720,7 @@ export async function abrirSemana(formData: FormData) {
     const params = new URLSearchParams({ vista: "auditorias" });
     if (laboratorioId) params.set("lab", laboratorioId);
     if (TRIMESTRES.includes(trimestre)) params.set("trimestre", trimestre);
+    if (Number.isInteger(anio)) params.set("anio", String(anio));
     if (mensaje) params.set("error", mensaje);
     return `/panel/auditorias/computo?${params.toString()}`;
   };
@@ -665,6 +768,7 @@ export async function abrirSemana(formData: FormData) {
         { data: computadoras },
         { data: items },
         { data: ancla },
+        { data: config },
       ] = await Promise.all([
         supabase
           .from("labs_computo")
@@ -686,6 +790,12 @@ export async function abrirSemana(formData: FormData) {
           .eq("trimestre", trimestre)
           .eq("numero_semana", 1)
           .maybeSingle(),
+        supabase
+          .from("trimestres_config")
+          .select("fecha_inicio")
+          .eq("anio", anio)
+          .eq("trimestre", trimestre)
+          .maybeSingle(),
       ]);
 
       if (!laboratorio) {
@@ -695,7 +805,10 @@ export async function abrirSemana(formData: FormData) {
       } else if (!items || items.length === 0) {
         error = "No hay ítems de checklist activos.";
       } else {
-        const inicio = ancla?.semana_inicio ?? inicioTrimestre(trimestre, anio);
+        const inicio =
+          ancla?.semana_inicio ??
+          config?.fecha_inicio ??
+          inicioTrimestre(trimestre, anio);
         const semanaInicio = sumarDias(inicio, (numeroSemana - 1) * 7);
 
         const { data: creada, error: errorInsert } = await supabase
@@ -1015,6 +1128,53 @@ export async function completarSemana(
         error instanceof Error
           ? error.message
           : "No se pudo completar la semana.",
+    };
+  }
+}
+
+/**
+ * Devuelve una semana cerrada por error al estado borrador. Se borra la marca
+ * de cierre para que la próxima finalización registre una hora nueva.
+ */
+export async function reabrirSemana(auditoriaId: string): Promise<EstadoAccion> {
+  const perfil = await exigirChecklist();
+  if (!perfil) return { ok: false, error: "No autorizado." };
+  if (!auditoriaId) return { ok: false, error: "Auditoría inválida." };
+
+  try {
+    const supabase = createAdminClient();
+    const { data: auditoria } = await supabase
+      .from("auditorias_computo")
+      .select("estado")
+      .eq("id", auditoriaId)
+      .maybeSingle();
+
+    if (!auditoria) return { ok: false, error: "Auditoría no encontrada." };
+
+    if (auditoria.estado !== "completada") {
+      return { ok: false, error: "La semana ya está abierta para edición." };
+    }
+
+    const { error } = await supabase
+      .from("auditorias_computo")
+      .update({
+        estado: "borrador",
+        completado_en: null,
+        problemas: 0,
+      })
+      .eq("id", auditoriaId);
+
+    if (error) return { ok: false, error: error.message };
+
+    revalidar(auditoriaId);
+    return { ok: true, mensaje: "Semana reabierta para edición." };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo reabrir la semana.",
     };
   }
 }

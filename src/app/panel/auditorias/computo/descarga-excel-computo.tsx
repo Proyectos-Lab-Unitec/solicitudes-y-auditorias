@@ -5,8 +5,9 @@ import { FiAlertTriangle, FiDownload } from "react-icons/fi";
 import {
   TRIMESTRES,
   formatearSemana,
-  inicioSemana,
-  semanaActual,
+  inicioSemanaDesde,
+  inicioTrimestre,
+  semanaActualDesde,
   trimestreActual,
   type Trimestre,
 } from "@/lib/computo";
@@ -32,19 +33,44 @@ const CLASE_CONTROL =
 
 export function DescargaExcelComputo({
   anio,
+  configuracion,
   laboratorios,
   auditorias,
 }: {
   anio: number;
+  configuracion: Record<string, Record<string, string>>;
   laboratorios: Laboratorio[];
   auditorias: Auditoria[];
 }) {
+  function inicioDe(anioConsulta: number, trimestreConsulta: Trimestre) {
+    return (
+      configuracion[String(anioConsulta)]?.[trimestreConsulta] ??
+      inicioTrimestre(trimestreConsulta, anioConsulta)
+    );
+  }
+
   const trimestreInicial = trimestreActual();
+  const [anioTexto, setAnioTexto] = useState(String(anio));
+  const [anioSeleccionado, setAnioSeleccionado] = useState(anio);
   const [trimestre, setTrimestre] = useState<Trimestre>(trimestreInicial);
   const [semana, setSemana] = useState(() =>
-    semanaActual(trimestreInicial, anio)
+    semanaActualDesde(inicioDe(anio, trimestreInicial))
   );
   const [modo, setModo] = useState<Modo>("resultados");
+
+  function cambiarAnio(valor: string) {
+    setAnioTexto(valor);
+
+    const nuevoAnio = Number.parseInt(valor, 10);
+    if (
+      Number.isInteger(nuevoAnio) &&
+      nuevoAnio >= 2000 &&
+      nuevoAnio <= 2100
+    ) {
+      setAnioSeleccionado(nuevoAnio);
+      setSemana(semanaActualDesde(inicioDe(nuevoAnio, trimestre)));
+    }
+  }
 
   const activos = laboratorios.filter((lab) => lab.activo);
 
@@ -53,13 +79,15 @@ export function DescargaExcelComputo({
       !auditorias.some(
         (auditoria) =>
           auditoria.laboratorio_id === lab.id &&
-          auditoria.anio === anio &&
+          auditoria.anio === anioSeleccionado &&
           auditoria.trimestre === trimestre &&
           auditoria.numero_semana === semana
       )
   );
 
-  const rango = formatearSemana(inicioSemana(trimestre, anio, semana));
+  const rango = formatearSemana(
+    inicioSemanaDesde(inicioDe(anioSeleccionado, trimestre), semana)
+  );
 
   return (
     <section className="rounded-xl border border-borde bg-tarjeta p-4 sm:p-5">
@@ -73,7 +101,7 @@ export function DescargaExcelComputo({
           </h2>
           <p className="mt-1 text-sm text-tenue">
             Un archivo con una hoja por laboratorio activo. Rango seleccionado:{" "}
-            {trimestre} {anio} · Semana {semana} ({rango}).
+            {trimestre} {anioSeleccionado} · Semana {semana} ({rango}).
           </p>
         </div>
         <span className="etiqueta-tecnica rounded-md border border-borde bg-superficie-clara px-2 py-1 text-[9px] text-tenue">
@@ -84,11 +112,27 @@ export function DescargaExcelComputo({
       <form
         action="/api/auditorias/computo/excel"
         method="get"
-        className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end"
+        className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end"
       >
-        <input type="hidden" name="anio" value={anio} />
         <input type="hidden" name="trimestre" value={trimestre} />
         <input type="hidden" name="semana" value={semana} />
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-tenue">
+            Año
+          </span>
+          <input
+            type="number"
+            name="anio"
+            min={2000}
+            max={2100}
+            required
+            value={anioTexto}
+            onChange={(evento) => cambiarAnio(evento.target.value)}
+            className={CLASE_CONTROL}
+            aria-label="Año del reporte"
+          />
+        </label>
 
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-tenue">
@@ -96,9 +140,13 @@ export function DescargaExcelComputo({
           </span>
           <select
             value={trimestre}
-            onChange={(evento) =>
-              setTrimestre(evento.target.value as Trimestre)
-            }
+            onChange={(evento) => {
+              const nuevoTrimestre = evento.target.value as Trimestre;
+              setTrimestre(nuevoTrimestre);
+              setSemana(
+                semanaActualDesde(inicioDe(anioSeleccionado, nuevoTrimestre))
+              );
+            }}
             className={CLASE_CONTROL}
             aria-label="Trimestre del reporte"
           >
@@ -160,7 +208,8 @@ export function DescargaExcelComputo({
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
           <p className="flex items-center gap-2 font-semibold">
             <FiAlertTriangle className="size-4 shrink-0 text-amber-600" />
-            Faltan registros para {trimestre} {anio} · Semana {semana}
+            Faltan registros para {trimestre} {anioSeleccionado} · Semana{" "}
+            {semana}
           </p>
           <p className="mt-1 text-amber-800">
             Los siguientes laboratorios activos todavía no tienen revisión

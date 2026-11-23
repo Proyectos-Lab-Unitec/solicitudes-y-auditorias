@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  FiCalendar,
   FiCheckSquare,
   FiHome,
   FiInbox,
@@ -101,6 +102,13 @@ export function PanelShell({
       label: "Auditorías de cómputo",
       codigo: "AC",
       icono: FiMonitor,
+    },
+    {
+      modulo: "configuracion-trimestres",
+      href: "/panel/configuracion/trimestres",
+      label: "Trimestres",
+      codigo: "TRI",
+      icono: FiCalendar,
     },
   ];
 

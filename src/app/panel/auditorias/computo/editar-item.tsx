@@ -13,7 +13,6 @@ export function EditarItem({
     id: string;
     nombre: string;
     categoria: string;
-    orden: number;
   };
 }) {
   const router = useRouter();
@@ -26,7 +25,6 @@ export function EditarItem({
     if (guardando) return;
 
     const formData = new FormData(event.currentTarget);
-    const orden = Number.parseInt(String(formData.get("orden") ?? "0"), 10);
 
     setGuardando(true);
     setError("");
@@ -35,7 +33,6 @@ export function EditarItem({
       const resultado = await actualizarItem(item.id, {
         nombre: String(formData.get("nombre") ?? ""),
         categoria: String(formData.get("categoria") ?? ""),
-        orden: Number.isFinite(orden) ? orden : 0,
       });
 
       if (!resultado.ok) {
@@ -71,7 +68,7 @@ export function EditarItem({
         <ModalEdicion
           titulo="Editar ítem"
           etiqueta="Ítem / Editar"
-          descripcion="Actualiza el nombre, la categoría y el orden."
+          descripcion="Actualiza el nombre y la categoría. El orden se cambia con las flechas del listado."
           guardando={guardando}
           error={error}
           onClose={() => setAbierto(false)}
@@ -108,19 +105,6 @@ export function EditarItem({
                 </option>
               ))}
             </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-texto">
-              Orden
-            </span>
-            <input
-              name="orden"
-              type="number"
-              defaultValue={item.orden}
-              disabled={guardando}
-              className={CLASE_INPUT}
-            />
           </label>
         </ModalEdicion>
       )}

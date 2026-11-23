@@ -6,6 +6,7 @@ import { FiCheckCircle } from "react-icons/fi";
 import { ModalConfirmacion } from "@/components/modal-confirmacion";
 import type { EstadoAccion } from "@/lib/types";
 import { completarSemana, guardarSemana } from "./actions";
+import { useBusquedaComputadoras } from "./busqueda-computadoras";
 
 const CLASE_CHECKBOX =
   "size-4 rounded border-borde text-superficie-azul accent-superficie-azul focus:ring-2 focus:ring-superficie-azul/30 disabled:opacity-60";
@@ -34,6 +35,7 @@ export function FormularioSemana({
   observaciones: string | null;
 }) {
   const router = useRouter();
+  const { coincide: coincideBusqueda } = useBusquedaComputadoras();
   const formRef = useRef<HTMLFormElement>(null);
   const [guardando, setGuardando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
@@ -213,6 +215,7 @@ export function FormularioSemana({
         return (
           <article
             key={computadora.id}
+            hidden={!coincideBusqueda(computadora)}
             className="overflow-hidden rounded-xl border border-borde bg-tarjeta"
           >
             <header className="flex items-center justify-between gap-3 border-b border-borde bg-superficie-clara/60 px-4 py-3">
@@ -354,6 +357,12 @@ export function FormularioSemana({
         );
       })}
 
+      {computadoras.every((computadora) => !coincideBusqueda(computadora)) && (
+        <div className="rounded-xl border border-dashed border-borde bg-superficie-clara p-6 text-sm text-tenue">
+          No hay computadoras que coincidan con la búsqueda.
+        </div>
+      )}
+
       <label className="block rounded-xl border border-borde bg-tarjeta p-4">
         <span className="etiqueta-tecnica text-[9px] text-tenue">
           Observaciones generales de la semana
@@ -386,7 +395,7 @@ export function FormularioSemana({
           disabled={guardando}
           className="rounded-lg border border-borde bg-white px-4 py-2.5 text-sm font-medium text-texto transition hover:bg-superficie-clara disabled:opacity-60"
         >
-          {guardando ? "Guardando…" : "Guardar revisión"}
+          {guardando ? "Guardando…" : "Guardar borrador"}
         </button>
         <button
           type="button"

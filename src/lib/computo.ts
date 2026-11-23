@@ -6,6 +6,14 @@ export const TRIMESTRES = ["Q1", "Q2", "Q3", "Q4"] as const;
 
 export type Trimestre = (typeof TRIMESTRES)[number];
 
+export const SEMANAS_POR_TRIMESTRE = 10;
+
+export type ConfigTrimestre = {
+  anio: number;
+  trimestre: Trimestre;
+  fecha_inicio: string;
+};
+
 export type EstadoAuditoria = "borrador" | "completada";
 
 export const ESTADOS_RESPUESTA = ["pendiente", "ok"] as const;
@@ -110,6 +118,46 @@ export function formatearSemanaCorta(lunes: string) {
   return `${corta(fechas[0])} – ${corta(fechas[4])}`;
 }
 
+/** Momento en que se cerró una revisión, en la zona horaria de UNITEC. */
+export function formatearFechaHora(valor: string | null) {
+  if (!valor) return "—";
+
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("es-SV", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "America/El_Salvador",
+  }).format(fecha);
+}
+
+/** Quita mayúsculas, acentos y signos para comparar códigos y nombres. */
+export function normalizarBusqueda(valor: string) {
+  return valor
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/** "24" encuentra "PC-24"; "pc 24" y "pc24" también. */
+export function coincideComputadora(
+  computadora: { codigo: string; nombre?: string | null },
+  busqueda: string
+) {
+  const termino = normalizarBusqueda(busqueda.trim());
+  if (!termino) return true;
+
+  return [computadora.codigo, computadora.nombre ?? ""].some((campo) =>
+    normalizarBusqueda(campo).includes(termino)
+  );
+}
+
 /** Trimestre natural en que cae hoy. */
 export function trimestreActual(): Trimestre {
   const mes = Number(fechaHoy().slice(5, 7));
@@ -127,4 +175,31 @@ export function semanaActual(trimestre: Trimestre, anio: number) {
 /** Lunes canónico de una semana del trimestre. */
 export function inicioSemana(trimestre: Trimestre, anio: number, semana: number) {
   return sumarDias(inicioTrimestre(trimestre, anio), (semana - 1) * 7);
+}
+
+/** Lunes de una semana contando desde la fecha configurada de la semana 1. */
+export function inicioSemanaDesde(fechaInicio: string, semana: number) {
+  return sumarDias(fechaInicio, (semana - 1) * 7);
+}
+
+/** Semana 1–10 que corresponde a hoy, desde la fecha configurada. */
+export function semanaActualDesde(fechaInicio: string) {
+  const inicio = aFechaUTC(fechaInicio);
+  const hoy = aFechaUTC(fechaHoy());
+  const dias = Math.round((hoy.getTime() - inicio.getTime()) / 86_400_000);
+  return Math.min(
+    SEMANAS_POR_TRIMESTRE,
+    Math.max(1, Math.floor(dias / 7) + 1)
+  );
+}
+
+/** Viernes de la semana 10, para mostrar el fin estimado del trimestre. */
+export function finTrimestreDesde(fechaInicio: string) {
+  return sumarDias(fechaInicio, (SEMANAS_POR_TRIMESTRE - 1) * 7 + 4);
+}
+
+/** Valida que una fecha ISO sea lunes (el formato que exige la base). */
+export function esLunes(fecha: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+  return aFechaUTC(fecha).getUTCDay() === 1;
 }

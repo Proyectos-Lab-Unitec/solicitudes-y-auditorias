@@ -77,6 +77,8 @@ Las migraciones viven en `supabase/migrations/` y son la fuente de verdad:
 | `0008_anio_auditorias.sql` | año del trimestre en las auditorías de cómputo |
 | `0009_revision_semanal_unica.sql` | una sola revisión por semana (sin días) |
 | `0010_estados_checkbox.sql` | estados `pendiente`/`ok` y conteo de problemas |
+| `0011_config_trimestres.sql` | fechas de inicio por año/trimestre, RLS y recálculo de semanas |
+| `0012_trimestres_sin_activo.sql` | trimestres siempre con 10 semanas, sin estado activo/inactivo |
 
 En local:
 
@@ -121,6 +123,7 @@ barrera que impide leer o escribir sin pasar por la app. El modelo está en
 | `tiene_rol(...)` | Rol permitido **y** cuenta activa. |
 | `es_admin()`, `es_usuario()`, `es_consultor()`, `es_checklist()` | Atajos. |
 | `puede_leer_computo()` / `puede_escribir_computo()` | Matriz de cómputo. |
+| `puede_configurar_trimestres()` | Admin o checklist: editar fechas de trimestres. |
 | `puede_leer_solicitudes()` / `puede_escribir_solicitudes()` | Solicitudes. |
 
 Son `security definer` con `search_path` fijo para leer `perfiles` sin
@@ -132,9 +135,12 @@ recursión en las políticas.
 | --- | --- | --- |
 | `perfiles` | propio o admin | propio (sin cambiar rol ni `activo`) o admin |
 | `labs_computo`, `computadoras`, `checklist_items`, auditorías, equipos y respuestas | admin, consultor, checklist | solo checklist |
+| `trimestres_config` | admin, consultor, checklist | admin y checklist |
 
-Admin y consultor son **solo lectura** en cómputo; `checklist` es el único que
-escribe. Una cuenta inactiva no pasa ninguna política aunque tenga sesión.
+Admin y consultor son **solo lectura** en el resto de cómputo; `checklist` es el
+único que escribe auditorías, laboratorios, computadoras e ítems. La única
+excepción es `trimestres_config`, donde admin también puede escribir. Una cuenta
+inactiva no pasa ninguna política aunque tenga sesión.
 
 ### Cómo agregar una tabla nueva
 
@@ -203,10 +209,10 @@ directamente** desde el panel, con una contraseña temporal y el rol asignado.
 
 | Rol | Acceso |
 | --- | --- |
-| `admin` | Panel de administración (usuarios y bandeja de solicitudes), auditorías 5S, de seguridad y de cómputo. |
+| `admin` | Panel de administración (usuarios y bandeja de solicitudes), auditorías 5S, de seguridad y de cómputo; configuración de trimestres. |
 | `usuario` | Jefe de área / Instructor: solicitudes de compra, mantenimiento y descarte. |
 | `consultor` | Solo lectura de los módulos. |
-| `checklist` | Solo auditorías de cómputo: laboratorios, ítems y registro diario. |
+| `checklist` | Auditorías de cómputo: laboratorios, ítems, registro semanal y configuración de trimestres. |
 
 El auto-registro crea la cuenta como `usuario` inactivo. El administrador la
 activa y, si corresponde, cambia el rol a `consultor` o `checklist`. La
@@ -256,13 +262,14 @@ El registro también valida el dominio en el navegador con
 | `/panel/auditorias/seguridad` | Auditorías de seguridad (admin y consultor) |
 | `/panel/auditorias/computo` | Auditorías de cómputo (admin, consultor y checklist) |
 | `/panel/auditorias/computo/laboratorios/[id]` | Detalle del laboratorio: computadoras y edición (solo checklist escribe) |
+| `/panel/configuracion/trimestres` | Fechas de inicio de Q1–Q4 por año (admin y checklist editan) |
 | `/auth/confirm` | Confirmación de correo de Supabase |
 
 ### Flujo de auditorías de cómputo
 
 El rol `checklist` registra la revisión en tres pasos:
 
-1. Elige el laboratorio de la lista.
+1. Elige el año y el laboratorio de la lista.
 2. Elige el trimestre (`Q1`–`Q4`).
 3. Elige la semana (1–10). Al abrirla se cargan las computadoras del
    laboratorio con sus ítems de Hardware y Software.
@@ -278,14 +285,47 @@ generales en `auditorias_computo.observaciones`. El año se guarda en
 `auditorias_computo.anio`, así que el mismo trimestre puede repetirse en años
 distintos. Admin y consultor ven el mismo asistente en modo lectura.
 
+### Configuración de trimestres
+
+En `/panel/configuracion/trimestres`, admin y checklist definen el **lunes de la
+semana 1** de cada trimestre. Las 10 semanas se calculan siempre desde esa
+fecha. La pantalla permite:
+
+- Escribir cualquier año entre 2000 y 2100, sin listas cerradas.
+- Crear Q1–Q4 de ese año con el calendario predeterminado.
+- Editar el lunes de la semana 1 de cualquier trimestre.
+- Ver cuántas auditorías se recalcularán y confirmar el cambio en un modal.
+
+La configuración vive en `trimestres_config` y se siembra automáticamente para
+el año actual y el siguiente. Al guardar una fecha, la función SQL
+`guardar_trimestre_config` actualiza `semana_inicio` de todas las auditorías de
+ese año y trimestre; no borra respuestas, observaciones, estados ni horas de
+cierre. No existe un estado activo/inactivo por trimestre: si el lunes está
+definido, las 10 semanas existen automáticamente.
+
 El rango lunes–viernes se usa solo como **etiqueta** de la semana; no se guarda
 ninguna fecha de revisión por día.
+
+Al finalizar se guarda `auditorias_computo.completado_en` con la fecha y hora
+(zona de El Salvador) en que se cerró la revisión. El detalle de la semana la
+muestra como **Completado en:**. Si se cerró por error, el rol `checklist` puede
+usar **Reabrir para edición** en el cuadro superior: la semana vuelve a
+`borrador`, se limpia `completado_en` y al volver a completarla se registra la
+hora nueva.
+
+Debajo del cuadro de información hay una barra de búsqueda de computadoras por
+código o nombre. Ignora mayúsculas, acentos y guiones: escribir `24` muestra
+`PC-24`, y `pc 24` también. Funciona igual en la revisión editable y en la vista
+de solo lectura; en la revisión editable las tarjetas se ocultan sin quitar sus
+campos del formulario, para no perder marcas al guardar con un filtro activo.
 
 Las computadoras ya no tienen una lista global: se administran desde el
 **detalle del laboratorio** (enlace "Abrir" en la lista de laboratorios).
 Ahí el rol `checklist` puede editar los datos del laboratorio, agregar, editar,
-activar/desactivar y eliminar computadoras. Los ítems del checklist también se
-pueden editar desde la pestaña `Ítems`. Admin y consultor solo leen.
+activar/desactivar y eliminar computadoras. Los ítems del checklist se
+administran desde la pestaña `Ítems`, en dos bloques (Hardware y Software): se
+pueden crear, editar, activar/desactivar y eliminar, y el orden se ajusta con las
+flechas de subir/bajar de cada fila. Admin y consultor solo leen.
 
 ### Descarga de Excel
 

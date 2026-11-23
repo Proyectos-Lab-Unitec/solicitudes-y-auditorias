@@ -60,6 +60,8 @@ type DatosExcel = {
   anio: number;
   trimestre: Trimestre;
   semana: number;
+  /** Lunes configurado de la semana seleccionada. */
+  semanaInicio?: string;
   laboratorios: LaboratorioExcel[];
   computadoras: ComputadoraExcel[];
   items: ItemExcel[];
@@ -204,11 +206,9 @@ export async function generarExcelComputo(
   );
 
   const usados = new Set<string>();
-  const inicioCanonico = inicioSemana(
-    datos.trimestre,
-    datos.anio,
-    datos.semana
-  );
+  const inicioCanonico =
+    datos.semanaInicio ??
+    inicioSemana(datos.trimestre, datos.anio, datos.semana);
 
   for (const laboratorio of datos.laboratorios) {
     const nombre = nombreHojaUnico(laboratorio.codigo, datos.semana, usados);

@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { getPerfilActual } from "@/lib/auth";
 import {
   TRIMESTRES,
+  inicioSemanaDesde,
   type Trimestre,
 } from "@/lib/computo";
 import {
@@ -58,6 +59,15 @@ export async function GET(request: Request) {
   const modo = modoParam as ModoExcelComputo;
   const trimestreValidado = trimestre as Trimestre;
   const supabase = createAdminClient();
+
+  const configRes = await supabase
+    .from("trimestres_config")
+    .select("fecha_inicio")
+    .eq("anio", anio)
+    .eq("trimestre", trimestreValidado)
+    .maybeSingle();
+
+  if (configRes.error) return error(configRes.error.message, 500);
 
   const labsRes = await supabase
     .from("labs_computo")
@@ -140,6 +150,9 @@ export async function GET(request: Request) {
     anio,
     trimestre: trimestreValidado,
     semana,
+    semanaInicio: configRes.data?.fecha_inicio
+      ? inicioSemanaDesde(configRes.data.fecha_inicio, semana)
+      : undefined,
     laboratorios,
     computadoras,
     items,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import {
+  FiCalendar,
   FiCheckSquare,
   FiInbox,
   FiMonitor,
@@ -102,8 +103,18 @@ const TARJETAS: Tarjeta[] = [
     href: "/panel/auditorias/computo",
     titulo: "Auditorías de cómputo",
     descripcion:
-      "Registra laboratorios, ítems revisados y auditorías diarias.",
+      "Registra laboratorios, ítems revisados y auditorías semanales.",
     icono: FiMonitor,
+    listo: true,
+  },
+  {
+    modulo: "configuracion-trimestres",
+    codigo: "TRI",
+    href: "/panel/configuracion/trimestres",
+    titulo: "Configuración de trimestres",
+    descripcion:
+      "Define el lunes de la semana 1 de cada trimestre y recalcula sus semanas.",
+    icono: FiCalendar,
     listo: true,
   },
 ];
